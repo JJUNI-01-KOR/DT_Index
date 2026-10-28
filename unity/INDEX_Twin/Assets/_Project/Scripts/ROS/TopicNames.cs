@@ -6,7 +6,8 @@ public static class TopicNames
     // ── Unity → ROS2 : 제어 패널 버튼 ──
     public const string FactoryStart      = "/factory/start";           // std_msgs/Bool
     public const string EmergencyStop     = "/factory/emergency_stop";  // std_msgs/Bool (true=누름, false=해제)
-    public const string PalletReset       = "/factory/pallet_reset";    // std_msgs/Bool
+    public const string Pallet1Reset      = "/pallet_1_reset";          // std_msgs/Bool, [불량 팔레트 정리]
+    public const string Pallet2Reset      = "/pallet_2_reset";          // std_msgs/Bool, [출고 팔레트 정리]
     public const string InjectFault       = "/factory/inject_fault";    // std_msgs/String (arm_1~4, conveyor, agv_1)
     public const string FaultClear        = "/factory/fault_clear";     // std_msgs/Bool
 
@@ -16,7 +17,6 @@ public static class TopicNames
     public const string Detect1Event      = "/detect_1_event";          // factory_interfaces/DetectEvent (reject, reject_wait)
     public const string Detect2Event      = "/detect_2_event";          // factory_interfaces/DetectEvent (end_1, end_2, end_wait)
     public const string Agv1Status        = "/agv_1_status";            // std_msgs/String (IDLE, MOVING, ARRIVED, LOADED)
-    public const string Pallet1Count      = "/pallet_1_count";          // std_msgs/Int32 (바뀔 때) 불량 팔레트 적재 수
 
     // ── ROS2 → Unity ──
     public const string ConveyorCmd       = "/conveyor/cmd";            // std_msgs/Bool

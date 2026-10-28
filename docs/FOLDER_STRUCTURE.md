@@ -75,7 +75,7 @@ DT_Index/
 | `setup.py`, `package.xml` | 실행 파일 등록 (`factory_manager_node`) | |
 
 **토픽 요약**
-- 구독: `/factory/start`, `/factory/emergency_stop`, `/factory/pallet_reset`, `/factory/inject_fault`, `/factory/fault_clear`, `/bin/count`, `/conveyor/box_count`, `/detect_1_event`, `/detect_2_event`, `/agv_1_status`, `/pallet_1_count`, `/pallet_2_count`, `/factory/heartbeat_unity`
+- 구독: `/factory/start`, `/factory/emergency_stop`, `/pallet_1_reset`, `/pallet_2_reset`, `/factory/inject_fault`, `/factory/fault_clear`, `/bin/count`, `/conveyor/box_count`, `/detect_1_event`, `/detect_2_event`, `/agv_1_status`, `/pallet_2_count`, `/factory/heartbeat_unity`
 - 발행: `/conveyor/cmd`, `/factory/state`, `/factory/stats`, `/factory/heartbeat_ros`, `/agv_1_cmd`
 - 서비스 호출: `/arm_1~3_pick_place`
 - AGV1 (10.28 결정): `/agv_1_status`가 LOADED면 `/agv_1_cmd` depart, `/pallet_2_count`가 늘면(출고 팔레트 적재 완료) `/agv_1_cmd` return. RUNNING이 아니면 보내지 않음
@@ -105,7 +105,7 @@ AGV1 출발·복귀 (10.28 결정): factory_manager가 `/agv_1_cmd`(std_msgs/Str
 
 | 파일 | 역할 | 관련 |
 |---|---|---|
-| `dt_palletizer/palletizer_node.py` | `/agv_1_status`가 ARRIVED면 `/arm_4_pick_place`로 AGV 위 박스를 다음 칸에 적재. 적재 수(0~12)를 `/pallet_2_count`(Int32, 바뀔 때)로 factory_manager에 전달. `/factory/pallet_reset` 받으면 0으로. `/factory/state`가 RUNNING이 아니면 대기 | FR-13~15 |
+| `dt_palletizer/palletizer_node.py` | `/agv_1_status`가 ARRIVED면 `/arm_4_pick_place`로 AGV 위 박스를 다음 칸에 적재. 적재 수(0~12)를 `/pallet_2_count`(Int32, 바뀔 때)로 factory_manager에 전달. `/pallet_2_reset` 받으면 0으로. `/factory/state`가 RUNNING이 아니면 대기 | FR-13~15 |
 | `dt_palletizer/pallet_layout.py` | 출고 팔레트 12칸(2×2, 3단) 좌표 계산. 팔레트 원점 + 박스 크기 → n번째 칸 Pose. 적재 순서 고정 | FR-13, NFR-06 |
 
 ### 1.6 `dt_fake_unity/` — [D] · scope `fake`
@@ -171,7 +171,7 @@ ROS 통신은 **이 폴더에서만** 한다. 다른 스크립트는 여기 이�
 | `Pusher.cs` | B | 판정된 박스를 불량 칸으로 밀어냄 (컨베이어는 계속 동작) | FR-07 |
 | `RejectSlot.cs` | B | 불량 칸 1칸. 들어오면 `reject`, 차서 대기면 `reject_wait` → `/detect_1_event` | FR-07, 10 |
 | `EndSlots.cs` | C | 라인 끝 대기 칸 2칸. `end_1`·`end_2`, 다 차면 `end_wait` → `/detect_2_event`. 먼저 온 순서 유지 | FR-09, 10 |
-| `PalletSlots.cs` | B·D | 팔레트 칸 표시용. 불량 팔레트 = pallet_1 (B, `/pallet_1_count` 발행), 출고 팔레트 12칸 = pallet_2 (D) | FR-08, 13 |
+| `PalletSlots.cs` | B·D | 팔레트 칸 표시용. 불량 팔레트 = pallet_1 12칸 (B, 칸 계산과 적재 수는 factory_manager), 출고 팔레트 = pallet_2 12칸 (D) | FR-08, 13 |
 
 ### 2.4 `_Project/Scripts/AGV/` — [C] · scope `unity-agv`
 
