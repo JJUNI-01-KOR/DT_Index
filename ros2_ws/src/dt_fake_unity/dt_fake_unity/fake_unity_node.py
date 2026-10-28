@@ -11,7 +11,7 @@ class FakeUnity(Node):
     def __init__(self):
         super().__init__('fake_unity')
         self.get_logger().info('fake_unity 시작 (뼈대)')
-        # TODO 발행: /bin/count, /conveyor/box_count, /detect_1_event, /detect_2_event, /agv_1_status, /factory/heartbeat
+        # TODO 발행: /bin/count, /conveyor/box_count, /detect_1_event, /detect_2_event, /agv_1_status, /factory/heartbeat_unity
         # TODO 구독: /conveyor/cmd, /agv_1_goal → goal 받으면 MOVING, 8초 뒤 ARRIVED
         # TODO 서비스 서버: /arm_1_pick_place ~ /arm_4_pick_place (1초 뒤 success)
 

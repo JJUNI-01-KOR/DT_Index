@@ -70,13 +70,13 @@ DT_Index/
 | `factory_manager/line_rules.py` | 라인 조건 판단. ① `/conveyor/box_count` ≥ 4면 투입 중지, ≤ 3이면 재개 ② `reject_wait`·`end_wait`면 컨베이어 정지, 칸이 비면 재가동 | FR-02, 04, 10 |
 | `factory_manager/arm_dispatcher.py` | 로봇팔1~3에 `/arm_N_pick_place` 요청. 1: 적재함→컨베이어, 2: 불량 칸→PALLET_1, 3: 대기 칸(먼저 온 것)→AGV1. 실패 횟수 처리 | FR-02, 08, 11 |
 | `factory_manager/stats.py` | 생산 통계 계산 후 `/factory/stats` JSON 생성. `pallet_2`는 palletizer에게 받은 값 그대로. 투입 = 정상 + 불량 + 라인 위 | FR-19, SRS 6장 |
-| `factory_manager/heartbeat_monitor.py` | `/factory/heartbeat` 1초 발행, 수신이 3초 끊기면 E_STOP 요청 | FR-17, NFR-04 |
+| `factory_manager/heartbeat_monitor.py` | `/factory/heartbeat_ros` 1초 발행, `/factory/heartbeat_unity` 수신이 3초 끊기면 E_STOP 요청 | FR-17, NFR-04 |
 | `test/test_fsm.py`, `test/test_line_rules.py` | 상태 전이·투입 조건 단위 테스트 (`colcon test`) | NFR-03 |
 | `setup.py`, `package.xml` | 실행 파일 등록 (`factory_manager_node`) | |
 
 **토픽 요약**
-- 구독: `/factory/start`, `/factory/emergency_stop`, `/factory/pallet_reset`, `/factory/inject_fault`, `/factory/fault_clear`, `/bin/count`, `/conveyor/box_count`, `/detect_1_event`, `/detect_2_event`, `/agv_1_status`, `/factory/heartbeat`
-- 발행: `/conveyor/cmd`, `/factory/state`, `/factory/stats`, `/factory/heartbeat`
+- 구독: `/factory/start`, `/factory/emergency_stop`, `/factory/pallet_reset`, `/factory/inject_fault`, `/factory/fault_clear`, `/bin/count`, `/conveyor/box_count`, `/detect_1_event`, `/detect_2_event`, `/agv_1_status`, `/factory/heartbeat_unity`
+- 발행: `/conveyor/cmd`, `/factory/state`, `/factory/stats`, `/factory/heartbeat_ros`
 - 서비스 호출: `/arm_1~3_pick_place`
 - ⚠ AGV1 출발 요청, palletizer로부터 적재 수 받는 방법 (SRS 2.5, 10.28 결정)
 
@@ -95,7 +95,7 @@ DT_Index/
 
 | 파일 | 역할 | 관련 |
 |---|---|---|
-| `dt_agv/agv_1_controller_node.py` | 출발 요청을 받으면 `/agv_1_goal`(PoseStamped) 발행, `/agv_1_status`(IDLE·MOVING·ARRIVED) 구독. 상차 구역 ↔ 출고 팔레트 구역 왕복 관리 | FR-12 |
+| `dt_agv/agv_1_controller_node.py` | 출발 요청을 받으면 `/agv_1_goal`(PoseStamped) 발행, `/agv_1_status`(IDLE·MOVING·ARRIVED·LOADED) 구독. 상차 구역 ↔ 출고 팔레트 구역 왕복 관리 | FR-12 |
 | `dt_agv/cycle_timer.py` | 출발·도착·복귀 시각 기록 → 사이클 시간(초) 계산, 대시보드용으로 전달 | FR-19, SRS 6장 |
 | 웨이포인트 | `dt_bringup/config/agv_waypoints.yaml`에서 읽음 (정지 위치 2곳) | |
 
@@ -113,7 +113,7 @@ Unity 없이 ROS2 쪽만 테스트하기 위한 노드. 10.29 ROS 테스트와 B
 
 | 파일 | 역할 |
 |---|---|
-| `dt_fake_unity/fake_unity_node.py` | Unity가 보내야 할 것을 흉내: `/bin/count`, `/conveyor/box_count`, `/detect_1·2_event`, `/agv_1_status`(goal 받으면 MOVING → 8초 뒤 ARRIVED), `/factory/heartbeat`. `/arm_1~4_pick_place` 서버(1초 뒤 success) |
+| `dt_fake_unity/fake_unity_node.py` | Unity가 보내야 할 것을 흉내: `/bin/count`, `/conveyor/box_count`, `/detect_1·2_event`, `/agv_1_status`(goal 받으면 MOVING → 8초 뒤 ARRIVED), `/factory/heartbeat_unity`. `/arm_1~4_pick_place` 서버(1초 뒤 success) |
 | `dt_fake_unity/fake_panel.py` | 터미널 키 입력으로 버튼 흉내: s=동작, e=비상정지, r=팔레트 정리, f=고장 주입, c=조치 완료 |
 | `config/fake_scenario.yaml` | 박스 순서(정상·불량), 이동 시간, 실패를 일부러 낼 팔 번호 |
 
@@ -145,7 +145,7 @@ ROS 통신은 **이 폴더에서만** 한다. 다른 스크립트는 여기 이�
 | `RosBridge.cs` | `ROSConnection` 초기화, 모든 토픽 Publisher/Subscriber 등록, 받은 메시지를 C# 이벤트로 뿌림. 연결 상태를 UI에 알림 | NFR-08 |
 | `CoordConverter.cs` | 좌표 변환 **유일한 곳**. Unity→ROS `To<FLU>()`, ROS→Unity `From<FLU>()` | SRS 4.4 |
 | `ConnectionTest.cs` | 세팅 검증용. `/unity_ping`, `/detect_1_event`(커스텀 + 좌표 변환) 발행, `/conveyor/cmd` 구독 | chore #1 |
-| `HeartbeatLink.cs` | `/factory/heartbeat` 1초 발행·수신, 3초 끊기면 장비 정지 + 경고 | FR-17 |
+| `HeartbeatLink.cs` | `/factory/heartbeat_unity` 1초 발행, `/factory/heartbeat_ros` 수신이 3초 끊기면 장비 정지 + 경고 | FR-17 |
 | `TopicNames.cs` | 토픽 이름 상수 모음 (오타 방지, `<장비>_<번호>_<기능>` 규칙) | NFR-08 |
 
 ### 2.2 `_Project/Scripts/Arms/` — [A] 공통 · scope `unity-arm`
