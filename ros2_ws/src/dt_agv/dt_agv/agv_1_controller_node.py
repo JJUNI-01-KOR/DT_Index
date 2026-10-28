@@ -14,7 +14,7 @@ class Agv1Controller(Node):
         # TODO 발행: /agv_1_goal (geometry_msgs/PoseStamped)
         # TODO 구독: /agv_1_status (IDLE | MOVING | ARRIVED | LOADED)
         # TODO 사이클 시간 기록 (출발·도착·복귀)
-        # TODO ⚠ 출발·복귀 요청 받는 방법 미정 (SRS 2.5)
+        # TODO 구독: /agv_1_cmd (std_msgs/String: depart | return). factory_manager만 보낸다 (10.28 결정)
 
 
 def main(args=None):
