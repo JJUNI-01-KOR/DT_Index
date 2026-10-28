@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: f7031178eca577444a5dfcd81722b11f
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 354922
+  packageName: Modular Conveyor Belt System
+  packageVersion: 1.1.0
+  assetPath: Assets/Conveyor System/Demo/Settings/DemoVolumeProfile.asset
+  uploadId: 1010908

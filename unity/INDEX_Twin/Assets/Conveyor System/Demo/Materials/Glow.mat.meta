@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: c23b1580d5821d9429afc84577283396
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 354922
+  packageName: Modular Conveyor Belt System
+  packageVersion: 1.1.0
+  assetPath: Assets/Conveyor System/Demo/Materials/Glow.mat
+  uploadId: 1010908

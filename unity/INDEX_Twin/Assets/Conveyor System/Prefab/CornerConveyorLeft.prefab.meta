@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 52a74976047b5c441b612966bae460d9
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 354922
+  packageName: Modular Conveyor Belt System
+  packageVersion: 1.1.0
+  assetPath: Assets/Conveyor System/Prefab/CornerConveyorLeft.prefab
+  uploadId: 1010908

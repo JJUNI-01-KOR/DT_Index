@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: bf37173c5c02eb947b8856c7bc0556ed
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 354922
+  packageName: Modular Conveyor Belt System
+  packageVersion: 1.1.0
+  assetPath: Assets/Conveyor System/Prefab/UnloaderConveyor.prefab
+  uploadId: 1010908

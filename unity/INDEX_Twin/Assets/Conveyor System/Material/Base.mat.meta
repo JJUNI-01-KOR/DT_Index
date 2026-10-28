@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: f950285d799f68a4e82ab32f8442d1c5
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 354922
+  packageName: Modular Conveyor Belt System
+  packageVersion: 1.1.0
+  assetPath: Assets/Conveyor System/Material/Base.mat
+  uploadId: 1010908

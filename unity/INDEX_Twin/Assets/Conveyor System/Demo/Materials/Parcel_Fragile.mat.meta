@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 30c0a3a593b3cd34e8ceccc7fe5adfb4
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 354922
+  packageName: Modular Conveyor Belt System
+  packageVersion: 1.1.0
+  assetPath: Assets/Conveyor System/Demo/Materials/Parcel_Fragile.mat
+  uploadId: 1010908

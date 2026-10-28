@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 39e07e0eb49bd66439d1ce6d58abf175
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 354922
+  packageName: Modular Conveyor Belt System
+  packageVersion: 1.1.0
+  assetPath: Assets/Conveyor System/Prefab/StraightConveyor.prefab
+  uploadId: 1010908

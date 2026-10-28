@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: a55e61d63bfa0e444bf2066b3ddd0c5b
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 354922
+  packageName: Modular Conveyor Belt System
+  packageVersion: 1.1.0
+  assetPath: Assets/Conveyor System/Demo/Materials/DockDoor.mat
+  uploadId: 1010908
