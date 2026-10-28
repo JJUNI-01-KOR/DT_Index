@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: f7c148e7adc9a5c4c8f7044c5d3d41b1
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 354922
+  packageName: Modular Conveyor Belt System
+  packageVersion: 1.1.0
+  assetPath: Assets/Conveyor System/Prefab/PauserConveyor.prefab
+  uploadId: 1010908

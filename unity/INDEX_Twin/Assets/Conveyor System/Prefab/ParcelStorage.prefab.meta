@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 97dad2c9bbccf0f44a96c4a5e198af81
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 354922
+  packageName: Modular Conveyor Belt System
+  packageVersion: 1.1.0
+  assetPath: Assets/Conveyor System/Prefab/ParcelStorage.prefab
+  uploadId: 1010908

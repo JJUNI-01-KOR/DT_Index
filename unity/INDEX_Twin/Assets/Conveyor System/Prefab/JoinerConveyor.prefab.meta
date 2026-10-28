@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 176917d48e0e62a469e576ee837c1692
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 354922
+  packageName: Modular Conveyor Belt System
+  packageVersion: 1.1.0
+  assetPath: Assets/Conveyor System/Prefab/JoinerConveyor.prefab
+  uploadId: 1010908

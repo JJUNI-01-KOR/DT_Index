@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 8a215e18debfad040b0e3580dec37177
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 354922
+  packageName: Modular Conveyor Belt System
+  packageVersion: 1.1.0
+  assetPath: Assets/Conveyor System/Demo/Prefabs/Parcel_Fragile.prefab
+  uploadId: 1010908

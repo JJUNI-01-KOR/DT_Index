@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 8746f87b19ad4c74fa7ee0e2a1c2fc04
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 354922
+  packageName: Modular Conveyor Belt System
+  packageVersion: 1.1.0
+  assetPath: Assets/Conveyor System/Demo/Prefabs/Parcel_Perishable.prefab
+  uploadId: 1010908

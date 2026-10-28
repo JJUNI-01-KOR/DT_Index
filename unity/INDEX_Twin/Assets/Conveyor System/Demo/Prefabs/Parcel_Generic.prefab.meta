@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 3ee76f58cea33214f8b8a52e703e249c
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 354922
+  packageName: Modular Conveyor Belt System
+  packageVersion: 1.1.0
+  assetPath: Assets/Conveyor System/Demo/Prefabs/Parcel_Generic.prefab
+  uploadId: 1010908
