@@ -16,6 +16,7 @@ public static class TopicNames
     public const string Detect1Event      = "/detect_1_event";          // factory_interfaces/DetectEvent (reject, reject_wait)
     public const string Detect2Event      = "/detect_2_event";          // factory_interfaces/DetectEvent (end_1, end_2, end_wait)
     public const string Agv1Status        = "/agv_1_status";            // std_msgs/String (IDLE, MOVING, ARRIVED, LOADED)
+    public const string Pallet1Count      = "/pallet_1_count";          // std_msgs/Int32 (바뀔 때) 불량 팔레트 적재 수
 
     // ── ROS2 → Unity ──
     public const string ConveyorCmd       = "/conveyor/cmd";            // std_msgs/Bool
