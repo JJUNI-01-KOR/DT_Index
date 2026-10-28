@@ -6,7 +6,8 @@ public static class TopicNames
     // ── Unity → ROS2 : 제어 패널 버튼 ──
     public const string FactoryStart      = "/factory/start";           // std_msgs/Bool
     public const string EmergencyStop     = "/factory/emergency_stop";  // std_msgs/Bool (true=누름, false=해제)
-    public const string PalletReset       = "/factory/pallet_reset";    // std_msgs/Bool
+    public const string Pallet1Reset      = "/pallet_1_reset";          // std_msgs/Bool, [불량 팔레트 정리]
+    public const string Pallet2Reset      = "/pallet_2_reset";          // std_msgs/Bool, [출고 팔레트 정리]
     public const string InjectFault       = "/factory/inject_fault";    // std_msgs/String (arm_1~4, conveyor, agv_1)
     public const string FaultClear        = "/factory/fault_clear";     // std_msgs/Bool
 

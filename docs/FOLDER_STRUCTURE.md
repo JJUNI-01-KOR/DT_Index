@@ -75,10 +75,10 @@ DT_Index/
 | `setup.py`, `package.xml` | 실행 파일 등록 (`factory_manager_node`) | |
 
 **토픽 요약**
-- 구독: `/factory/start`, `/factory/emergency_stop`, `/factory/pallet_reset`, `/factory/inject_fault`, `/factory/fault_clear`, `/bin/count`, `/conveyor/box_count`, `/detect_1_event`, `/detect_2_event`, `/agv_1_status`, `/factory/heartbeat_unity`
-- 발행: `/conveyor/cmd`, `/factory/state`, `/factory/stats`, `/factory/heartbeat_ros`
+- 구독: `/factory/start`, `/factory/emergency_stop`, `/pallet_1_reset`, `/pallet_2_reset`, `/factory/inject_fault`, `/factory/fault_clear`, `/bin/count`, `/conveyor/box_count`, `/detect_1_event`, `/detect_2_event`, `/agv_1_status`, `/pallet_2_count`, `/factory/heartbeat_unity`
+- 발행: `/conveyor/cmd`, `/factory/state`, `/factory/stats`, `/factory/heartbeat_ros`, `/agv_1_cmd`
 - 서비스 호출: `/arm_1~3_pick_place`
-- ⚠ AGV1 출발 요청, palletizer로부터 적재 수 받는 방법 (SRS 2.5, 10.28 결정)
+- AGV1 (10.28 결정): `/agv_1_status`가 LOADED면 `/agv_1_cmd` depart, `/pallet_2_count`가 늘면(출고 팔레트 적재 완료) `/agv_1_cmd` return. RUNNING이 아니면 보내지 않음
 
 ### 1.3 `dt_arm/` — [A] · scope `arm`
 로봇팔 4대가 **같은 코드**를 쓰고 `arm_id` 파라미터만 다르게 4번 실행한다.
@@ -95,17 +95,17 @@ DT_Index/
 
 | 파일 | 역할 | 관련 |
 |---|---|---|
-| `dt_agv/agv_1_controller_node.py` | 출발 요청을 받으면 `/agv_1_goal`(PoseStamped) 발행, `/agv_1_status`(IDLE·MOVING·ARRIVED·LOADED) 구독. 상차 구역 ↔ 출고 팔레트 구역 왕복 관리 | FR-12 |
+| `dt_agv/agv_1_controller_node.py` | `/agv_1_cmd`(depart·return)를 받으면 `/agv_1_goal`(PoseStamped) 발행, `/agv_1_status`(IDLE·MOVING·ARRIVED·LOADED) 구독. 상차 구역 ↔ 출고 팔레트 구역 왕복 관리 | FR-12 |
 | `dt_agv/cycle_timer.py` | 출발·도착·복귀 시각 기록 → 사이클 시간(초) 계산, 대시보드용으로 전달 | FR-19, SRS 6장 |
 | 웨이포인트 | `dt_bringup/config/agv_waypoints.yaml`에서 읽음 (정지 위치 2곳) | |
 
-⚠ 출발·복귀 요청을 누가 어떤 방식(토픽/서비스)으로 보내는지 미정 — factory_manager(상차 완료 후), palletizer(적재 완료 후).
+AGV1 출발·복귀 (10.28 결정): factory_manager가 `/agv_1_cmd`(std_msgs/String: depart | return)로 명령한다. 명령권은 factory_manager 하나.
 
 ### 1.5 `dt_palletizer/` — [D] · scope `palletizer`
 
 | 파일 | 역할 | 관련 |
 |---|---|---|
-| `dt_palletizer/palletizer_node.py` | `/agv_1_status`가 ARRIVED면 `/arm_4_pick_place`로 AGV 위 박스를 다음 칸에 적재. 적재 수(0~12) 관리 후 factory_manager에 전달. `/factory/pallet_reset` 받으면 0으로. `/factory/state`가 RUNNING이 아니면 대기 | FR-13~15 |
+| `dt_palletizer/palletizer_node.py` | `/agv_1_status`가 ARRIVED면 `/arm_4_pick_place`로 AGV 위 박스를 다음 칸에 적재. 적재 수(0~12)를 `/pallet_2_count`(Int32, 바뀔 때)로 factory_manager에 전달. `/pallet_2_reset` 받으면 0으로. `/factory/state`가 RUNNING이 아니면 대기 | FR-13~15 |
 | `dt_palletizer/pallet_layout.py` | 출고 팔레트 12칸(2×2, 3단) 좌표 계산. 팔레트 원점 + 박스 크기 → n번째 칸 Pose. 적재 순서 고정 | FR-13, NFR-06 |
 
 ### 1.6 `dt_fake_unity/` — [D] · scope `fake`
@@ -171,7 +171,7 @@ ROS 통신은 **이 폴더에서만** 한다. 다른 스크립트는 여기 이�
 | `Pusher.cs` | B | 판정된 박스를 불량 칸으로 밀어냄 (컨베이어는 계속 동작) | FR-07 |
 | `RejectSlot.cs` | B | 불량 칸 1칸. 들어오면 `reject`, 차서 대기면 `reject_wait` → `/detect_1_event` | FR-07, 10 |
 | `EndSlots.cs` | C | 라인 끝 대기 칸 2칸. `end_1`·`end_2`, 다 차면 `end_wait` → `/detect_2_event`. 먼저 온 순서 유지 | FR-09, 10 |
-| `PalletSlots.cs` | B·D | 팔레트 칸 표시용. 불량 팔레트(B), 출고 팔레트 12칸(D) | FR-08, 13 |
+| `PalletSlots.cs` | B·D | 팔레트 칸 표시용. 불량 팔레트 = pallet_1 12칸 (B, 칸 계산과 적재 수는 factory_manager), 출고 팔레트 = pallet_2 12칸 (D) | FR-08, 13 |
 
 ### 2.4 `_Project/Scripts/AGV/` — [C] · scope `unity-agv`
 
@@ -230,7 +230,7 @@ ROS 통신은 **이 폴더에서만** 한다. 다른 스크립트는 여기 이�
 line_rules.py (박스 ≤3) → arm_dispatcher.py ──/arm_1_pick_place──▶ ArmPickPlaceServer.cs(팔1) + BoxBin.cs
 Conveyor.cs → SizeGate.cs(안 닿음) → EndSlots.cs ──/detect_2_event(end_1)──▶ line_rules.py, stats.py
 arm_dispatcher.py ──/arm_3_pick_place──▶ 팔3 → AgvCargo.cs
-⚠ 출발 요청 → agv_1_controller_node.py ──/agv_1_goal──▶ AgvWaypointDriver.cs ──/agv_1_status(ARRIVED)──▶ palletizer_node.py
+factory_manager ──/agv_1_cmd──▶ agv_1_controller_node.py ──/agv_1_goal──▶ AgvWaypointDriver.cs ──/agv_1_status(ARRIVED)──▶ palletizer_node.py
 palletizer_node.py + pallet_layout.py ──/arm_4_pick_place──▶ 팔4 → PalletSlots.cs
-⚠ 적재 수 → factory_manager → stats.py ──/factory/stats──▶ Dashboard.cs
+palletizer_node ──/pallet_2_count──▶ factory_manager → stats.py ──/factory/stats──▶ Dashboard.cs
 ```
