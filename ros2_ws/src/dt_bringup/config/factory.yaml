@@ -1,0 +1,22 @@
+# 공정 설정값 — 코드 수정 없이 바꾸는 값 (NFR-09). 단위는 이름에 포함.
+# 노드 이름 아래 ros__parameters 형식. launch에서 각 노드에 이 파일을 넘긴다.
+
+factory_manager:
+  ros__parameters:
+    feed_stop_count: 4          # 라인 위 박스가 이 수 이상이면 투입 중지 (FR-04)
+    feed_resume_count: 3        # 이 수 이하가 되면 투입 재개 (FR-04)
+    heartbeat_period_sec: 1.0   # Heartbeat 발행 주기 (FR-17)
+    heartbeat_timeout_sec: 3.0  # 이 시간 동안 수신이 없으면 E_STOP (FR-17)
+    state_publish_period_sec: 1.0
+    stats_publish_period_sec: 1.0
+
+palletizer_node:
+  ros__parameters:
+    pallet_capacity: 12         # 출고 팔레트 적재 수 (2x2, 3단) (FR-14)
+    pallet_cols: 2
+    pallet_rows: 2
+    pallet_layers: 3
+
+agv_1_controller:
+  ros__parameters:
+    waypoints_file: agv_waypoints.yaml

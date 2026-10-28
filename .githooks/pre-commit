@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+# COMMIT_RULES.md 1절·3절을 로컬에서 강제한다.
+#  1) main / develop 에 직접 커밋 금지 (PR로만 반영)
+#  2) 브랜치명 형식 경고
+#  3) 빌드 산출물·Unity Library·구매 에셋·ROS 설정 파일(개인 VM IP) 커밋 차단
+#  4) Unity 에셋을 새로 추가할 때 .meta 누락 차단
+#  5) LFS 대상이 아닌 10 MB 초과 파일 차단
+
+set -euo pipefail
+
+branch="$(git symbolic-ref --short -q HEAD || true)"
+
+# rebase 중 등 detached HEAD는 검사하지 않음
+[[ -z "$branch" ]] && exit 0
+
+# ── 1) 보호 브랜치 ──────────────────────────────────────────
+if [[ "$branch" == "main" || "$branch" == "develop" ]]; then
+  echo "" >&2
+  echo "✖ pre-commit 훅: '$branch' 브랜치에는 직접 커밋할 수 없습니다." >&2
+  echo "  작업 브랜치를 만들고 develop으로 PR을 보내세요." >&2
+  echo "    git switch develop && git pull" >&2
+  echo "    git switch -c feature/<scope>-<기능>     예) feature/manager-fsm" >&2
+  echo "" >&2
+  exit 1
+fi
+
+# ── 2) 브랜치명 형식 (경고만) ───────────────────────────────
+if [[ ! "$branch" =~ ^(feature|fix|docs|chore|test)/[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+  echo "⚠ pre-commit 훅 경고: 브랜치명 '$branch'가 규칙과 다릅니다." >&2
+  echo "  feature|fix|docs|chore|test/<scope>-<기능> (영문 소문자 + 하이픈)" >&2
+fi
+
+repo_root="$(git rev-parse --show-toplevel)"
+unity_assets="unity/INDEX_Twin/Assets/"
+errors=0
+
+mapfile -t staged < <(git diff --cached --name-only --diff-filter=ACMR)
+mapfile -t added  < <(git diff --cached --name-only --diff-filter=AR)
+
+# ── 3) 올리면 안 되는 경로 ──────────────────────────────────
+for f in "${staged[@]}"; do
+  case "$f" in
+    ros2_ws/build/*|ros2_ws/install/*|ros2_ws/log/*|ros2_ws/src/ROS-TCP-Endpoint/*)
+      echo "✖ 빌드 산출물/외부 패키지는 커밋하지 않습니다: $f" >&2; errors=1 ;;
+    unity/INDEX_Twin/Library/*|unity/INDEX_Twin/Temp/*|unity/INDEX_Twin/Logs/*|unity/INDEX_Twin/UserSettings/*|unity/INDEX_Twin/obj/*)
+      echo "✖ Unity 자동 생성 폴더는 커밋하지 않습니다: $f" >&2; errors=1 ;;
+    ${unity_assets}ThirdParty/*|${unity_assets}ThirdParty.meta)
+      echo "✖ 구매 에셋(ThirdParty)은 Git에 올리지 않습니다 (SRS 2.4): $f" >&2; errors=1 ;;
+    ${unity_assets}Resources/ROSConnectionPrefab.prefab)
+      echo "✖ ROS 설정 파일(각자 VM IP)은 커밋하지 않습니다: $f" >&2
+      echo "    → git restore --staged $f && bash scripts/setup-git-hooks.sh" >&2
+      echo "    (정말 바꿔야 하면 팀 합의 후 git commit --no-verify)" >&2
+      errors=1 ;;
+  esac
+done
+
+# ── 4) Unity .meta 누락 ─────────────────────────────────────
+for f in "${added[@]}"; do
+  [[ "$f" != ${unity_assets}* ]] && continue
+  [[ "$f" == *.meta ]] && continue
+  if ! git cat-file -e ":$f.meta" 2>/dev/null; then
+    echo "✖ .meta 파일이 함께 스테이징되지 않았습니다: $f.meta" >&2
+    echo "    → Unity 에디터에서 한 번 열어 .meta를 생성한 뒤 같이 add 하세요." >&2
+    errors=1
+  fi
+done
+
+# ── 5) LFS 아닌 대용량 파일 ─────────────────────────────────
+limit=$((10 * 1024 * 1024))
+for f in "${staged[@]}"; do
+  [[ -f "$repo_root/$f" ]] || continue
+  if [[ "$(git check-attr filter -- "$f" | awk '{print $NF}')" == "lfs" ]]; then
+    continue
+  fi
+  size=$(wc -c < "$repo_root/$f" | tr -d ' ')
+  if (( size > limit )); then
+    echo "✖ 10 MB를 넘는 파일이 LFS 대상이 아닙니다: $f ($((size / 1024 / 1024)) MB)" >&2
+    echo "    → .gitattributes에 확장자를 LFS로 추가하거나, 저장소 밖에서 공유하세요." >&2
+    errors=1
+  fi
+done
+
+if (( errors )); then
+  echo "" >&2
+  echo "  잘못 올린 파일 빼기: git restore --staged <파일>" >&2
+  exit 1
+fi
+
+exit 0

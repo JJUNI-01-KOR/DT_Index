@@ -1,0 +1,7 @@
+# 외부 ROS2 패키지 (버전 고정). 사용법:
+#   cd ros2_ws && vcs import src < dependencies.repos
+repositories:
+  ROS-TCP-Endpoint:
+    type: git
+    url: https://github.com/Unity-Technologies/ROS-TCP-Endpoint.git
+    version: ROS2v0.7.0

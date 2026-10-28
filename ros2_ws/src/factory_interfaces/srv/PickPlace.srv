@@ -1,0 +1,8 @@
+# 로봇팔 집기·놓기 명령 (SRS 4.4). 서비스: /arm_N_pick_place
+# /arm_1_pick_place 는 box_id를 비워 보내고, 집은 박스 ID를 message로 돌려받는다.
+string box_id
+geometry_msgs/Pose pick_pose
+geometry_msgs/Pose place_pose
+---
+bool success
+string message

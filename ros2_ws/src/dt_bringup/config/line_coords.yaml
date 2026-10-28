@@ -1,0 +1,18 @@
+# 라인 좌표표 (ROS 좌표, m · rad). 원본: docs/line_coords.md
+# ⚠ 2026.10.28 확정 전 임시값. 바꾸려면 4명 합의 (SRS 6장).
+# 형식: 이름: {x, y, z, yaw}
+
+bin_slots: []                 # 적재함 칸 20개
+feed_point:     {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}   # 컨베이어 투입 위치
+size_gate:      {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}
+reject_slot:    {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}
+end_slot_1:     {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}
+end_slot_2:     {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}
+arm_1_base:     {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}
+arm_2_base:     {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}
+arm_3_base:     {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}
+arm_4_base:     {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}
+agv_load_stop:  {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}   # 상차 구역 정지 위치
+agv_unload_stop: {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}  # 출고 팔레트 구역 정지 위치
+pallet_1_origin: {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}  # 불량 팔레트
+pallet_2_origin: {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}  # 출고 팔레트 1번 칸 기준

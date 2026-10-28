@@ -1,0 +1,7 @@
+# 가짜 Unity 시나리오 (dt_fake_unity). 담당 D.
+fake_unity:
+  ros__parameters:
+    box_sequence: "N,N,R,N,N,N,R,N"   # N=정상, R=규격 초과
+    agv_travel_sec: 8.0
+    pick_place_sec: 1.0
+    fail_arm_id: 0                    # 0이면 실패 없음, 1~4면 그 팔이 실패 응답

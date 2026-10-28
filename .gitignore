@@ -1,0 +1,53 @@
+# ─────────────────────────────────────────────────────────────
+#  Unity 프로젝트가 하위 폴더(unity/INDEX_Twin)에 있으므로
+#  Unity 항목에는 반드시 경로를 붙인다.
+# ─────────────────────────────────────────────────────────────
+
+# ── ROS2 ──
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/
+ros2_ws/src/ROS-TCP-Endpoint/
+__pycache__/
+*.pyc
+*.egg-info/
+*.bag
+*.db3
+
+# ── Unity ──
+unity/INDEX_Twin/[Ll]ibrary/
+unity/INDEX_Twin/[Tt]emp/
+unity/INDEX_Twin/[Oo]bj/
+unity/INDEX_Twin/[Bb]uild/
+unity/INDEX_Twin/[Bb]uilds/
+unity/INDEX_Twin/[Ll]ogs/
+unity/INDEX_Twin/[Uu]ser[Ss]ettings/
+unity/INDEX_Twin/[Mm]emoryCaptures/
+unity/INDEX_Twin/[Rr]ecordings/
+unity/INDEX_Twin/*.csproj
+unity/INDEX_Twin/*.sln
+unity/INDEX_Twin/*.slnx
+unity/INDEX_Twin/*.user
+unity/INDEX_Twin/*.pidb
+unity/INDEX_Twin/*.booproj
+unity/INDEX_Twin/*.svd
+unity/INDEX_Twin/*.pdb
+unity/INDEX_Twin/*.mdb
+unity/INDEX_Twin/*.opendb
+unity/INDEX_Twin/*.VC.db
+unity/INDEX_Twin/.vs/
+unity/INDEX_Twin/.vsconfig
+unity/INDEX_Twin/sysinfo.txt
+unity/INDEX_Twin/crashlytics-buildid.txt
+
+# 구매 에셋: 공개 저장소·Git에 올리지 않는다 (SRS 2.4). 팀원끼리 별도 공유
+unity/INDEX_Twin/Assets/ThirdParty/
+unity/INDEX_Twin/Assets/ThirdParty.meta
+
+# ── 개인 환경 ──
+.vscode/
+.idea/
+*.log
+.DS_Store
+Thumbs.db
+desktop.ini

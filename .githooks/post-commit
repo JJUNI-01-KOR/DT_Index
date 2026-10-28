@@ -1,0 +1,5 @@
+#!/bin/sh
+# Git LFS 훅. core.hooksPath=.githooks 로 바꾸면 기본 .git/hooks 의 LFS 훅이
+# 동작하지 않으므로 같은 내용을 여기에 둔다. (지우면 LFS 파일 업로드가 빠짐)
+command -v git-lfs >/dev/null 2>&1 || { printf >&2 "\n%s\n\n" "git-lfs가 설치되어 있지 않습니다. 설치 후 'git lfs install'을 실행하세요."; exit 2; }
+git lfs post-commit "$@"
