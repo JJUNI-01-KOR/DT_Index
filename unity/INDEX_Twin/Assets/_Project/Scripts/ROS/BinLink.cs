@@ -1,4 +1,4 @@
-// 적재함 → ROS2 (FR-02, FR-05). 담당 A · scope unity-ros
+// BinLink.cs : 적재함 → ROS2 (FR-02, FR-05). 담당 A · scope unity-ros
 // ROS 통신은 Scripts/ROS/ 에서만 한다 (CONVENTIONS 3절). BoxBin.cs는 ROS를 모른다.
 //
 //   발행: /bin/count (std_msgs/Int32) 적재함 남은 박스 수, 바뀔 때
@@ -9,7 +9,7 @@ using UnityEngine;
 using Unity.Robotics.ROSTCPConnector;
 using RosMessageTypes.Std;
 
-public class BoxBinRosLink : MonoBehaviour
+public class BinLink : MonoBehaviour
 {
     [SerializeField] private BoxBin bin;
 
@@ -20,7 +20,7 @@ public class BoxBinRosLink : MonoBehaviour
     void Awake()
     {
         if (bin == null) bin = GetComponent<BoxBin>();
-        if (bin == null) { Debug.LogError("[BoxBinRosLink] BoxBin이 연결되지 않음", this); enabled = false; return; }
+        if (bin == null) { Debug.LogError("[BinLink] BoxBin이 연결되지 않음", this); enabled = false; return; }
 
         ros = ROSConnection.GetOrCreateInstance();
         ros.RegisterPublisher<Int32Msg>(TopicNames.BinCount);
