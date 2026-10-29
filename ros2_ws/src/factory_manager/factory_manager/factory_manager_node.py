@@ -4,11 +4,45 @@
 
 실행: ros2 run factory_manager factory_manager_node
 """
+
+import math
+import os
+
 import rclpy
+import yaml
+from ament_index_python.packages import PackageNotFoundError, get_package_share_directory
+from factory_interfaces.srv import PickPlace
+from geometry_msgs.msg import Pose
 from rclpy.node import Node
 from std_msgs.msg import Bool, Int32, String
 
 from .fsm import Fsm, RUNNING
+from .line_rules import FeedGate
+
+
+def default_line_coords():
+    """dt_bringup에 설치된 라인 좌표표 경로. 못 찾으면 빈 문자열."""
+    try:
+        share = get_package_share_directory('dt_bringup')
+    except PackageNotFoundError:
+        return ''
+    return os.path.join(share, 'config', 'line_coords.yaml')
+
+
+def load_poses(path):
+    """라인 좌표표 yaml → {이름: Pose}. yaw는 z축 회전 쿼터니언으로 바꾼다."""
+    with open(path, encoding='utf-8') as f:
+        data = yaml.safe_load(f) or {}
+    poses = {}
+    for name, v in data.items():
+        if not isinstance(v, dict):  # bin_slots 같은 목록은 건너뜀
+            continue
+        p = Pose()
+        p.position.x, p.position.y, p.position.z = float(v['x']), float(v['y']), float(v['z'])
+        p.orientation.z = math.sin(v['yaw'] / 2)
+        p.orientation.w = math.cos(v['yaw'] / 2)
+        poses[name] = p
+    return poses
 
 
 class FactoryManager(Node):
@@ -26,16 +60,29 @@ class FactoryManager(Node):
         # true = 비상정지, false = 해제 (SRS 4.4)
         self.create_subscription(Bool, '/factory/emergency_stop', self.on_estop, 10)
         period = self.get_parameter('state_publish_period_sec').value
-        self.create_timer(period, self.publish_state)
+        self.create_timer(period, self.on_tick)
 
         # 라인 위 박스 (FR-04)
         self.declare_parameter('feed_stop_count', 4)
         self.declare_parameter('feed_resume_count', 3)
         self.feed_stop_count = self.get_parameter('feed_stop_count').value
         self.feed_resume_count = self.get_parameter('feed_resume_count').value
+        self.gate = FeedGate(self.feed_stop_count, self.feed_resume_count)
         self.box_count = 0  # 라인 위 박스 수
-        self.feed_allowed = True  # 로봇팔1 투입 허용 여부
+        self.feed_open = True  # 로봇팔1 투입 허용 여부
         self.create_subscription(Int32, '/conveyor/box_count', self.on_box_count, 10)
+        self.bin_count = 0  # 적재함 남은 박스 수
+        self.create_subscription(Int32, '/bin/count', self.on_bin_count, 10)
+        # 로봇팔1 투입
+        self.arm1 = self.create_client(PickPlace, '/arm_1_pick_place')
+        self.arm1_busy = False  # 요청을 보내고 응답을 기다리는 중
+        self.arm1_wait_logged = False  # '서비스 없음' 로그를 한 번만 찍기 위해
+        # 라인 좌표표 (D 관리, ROS 좌표)
+        self.declare_parameter('line_coords_file', default_line_coords())
+        coords = self.get_parameter('line_coords_file').value
+        self.poses = load_poses(coords) if coords else {}
+        if 'feed_point' not in self.poses:
+            self.get_logger().warn('라인 좌표표에 feed_point가 없어 원점을 투입 위치로 씀')
 
         self.get_logger().info('factory_manager 시작')
         self.step()  # 켜지면 컨베이어 정지부터 보낸다
@@ -68,19 +115,54 @@ class FactoryManager(Node):
     def on_box_count(self, msg):
         """라인 위 박스 수 (FR-04). 4개 이상이면 투입 중지, 3개 이하면 재개."""
         self.box_count = msg.data
-        if self.feed_allowed and self.box_count >= self.feed_stop_count:
-            self.feed_allowed = False
-            self.get_logger().info(f'라인 위 박스 {self.box_count}개, 투입 중지')
-        elif not self.feed_allowed and self.box_count <= self.feed_resume_count:
-            self.feed_allowed = True
-            self.get_logger().info(f'라인 위 박스 {self.box_count}개, 투입 재개')
+        feed_open = self.gate.update(msg.data)
+        if feed_open != self.feed_open:
+            self.feed_open = feed_open
+            self.get_logger().info(f'라인 위 박스 {self.box_count}개, 투입 {"재개" if feed_open else "중지"}')
+        self.step()
+
+    def on_bin_count(self, msg):
+        """적재함 남은 박스 수 (FR-02, FR-05). 0이면 로봇팔1을 부르지 않는다."""
+        self.bin_count = msg.data
+        self.step()
 
     def publish_state(self):
         self.state_pub.publish(String(data=self.fsm.state))
 
     def step(self):
         """장비 명령은 여기서만 정한다."""
-        self.set_conveyor(self.fsm.state == RUNNING)
+        run = self.fsm.state == RUNNING
+        self.set_conveyor(run)
+        if run and self.bin_count > 0 and self.feed_open and self.conveyor_on and not self.arm1_busy:
+            self.feed()
+
+    def on_tick(self):
+        """1초마다 상태를 다시 보내고 조건을 다시 본다."""
+        self.publish_state()
+        self.step()
+
+    def feed(self):
+        """로봇팔1에 투입 요청 (FR-02). 서비스가 아직 없으면 기다린다."""
+        if not self.arm1.service_is_ready():
+            if not self.arm1_wait_logged:
+                self.get_logger().warn('/arm_1_pick_place 서비스 대기 중 (로봇팔1 또는 fake 노드 없음)')
+                self.arm1_wait_logged = True
+            return
+        self.arm1_wait_logged = False
+        req = PickPlace.Request()
+        req.place_pose = self.poses.get('feed_point', Pose())
+        self.arm1_busy = True
+        self.get_logger().info('로봇팔1 투입 요청')
+        self.arm1.call_async(req).add_done_callback(self.on_arm1_done)
+
+    def on_arm1_done(self, future):
+        """로봇팔1 응답. 다음 투입은 박스 수가 바뀌거나 1초 타이머에서 다시 판단한다."""
+        self.arm1_busy = False
+        res = future.result()
+        if res.success:
+            self.get_logger().info(f'로봇팔1 투입 완료 {res.message}')
+        else:
+            self.get_logger().warn(f'로봇팔1 투입 실패 {res.message}')  # 집기 실패 → ERROR는 5.7
 
     def set_conveyor(self, on):
         """컨베이어 가동(True)·정지(False). 바뀔 때만 보낸다."""
