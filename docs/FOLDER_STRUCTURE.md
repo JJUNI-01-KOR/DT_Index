@@ -113,9 +113,11 @@ Unity 없이 ROS2 쪽만 테스트하기 위한 노드. 10.29 ROS 테스트와 B
 
 | 파일 | 역할 |
 |---|---|
-| `dt_fake_unity/fake_unity_node.py` | Unity가 보내야 할 것을 흉내: `/bin/count`, `/conveyor/box_count`, `/detect_1·2_event`, `/agv_1_status`(goal 받으면 MOVING → 8초 뒤 ARRIVED), `/factory/heartbeat_unity`. `/arm_1~4_pick_place` 서버(1초 뒤 success) |
-| `dt_fake_unity/fake_panel.py` | 터미널 키 입력으로 버튼 흉내: s=동작, e=비상정지, r=팔레트 정리, f=고장 주입, c=조치 완료 |
-| `config/fake_scenario.yaml` | 박스 순서(정상·불량), 이동 시간, 실패를 일부러 낼 팔 번호 |
+| `dt_fake_unity/fake_unity_node.py` | Unity가 보내야 할 것을 흉내: `/bin/count`, `/conveyor/box_count`, `/detect_1·2_event`, `/agv_1_status`(goal 받으면 MOVING → 8초 뒤 ARRIVED, 팔3 상차 시 LOADED), `/factory/heartbeat_unity`. `/arm_1~4_pick_place` 서버(1초 뒤 success, `/factory/state`가 E_STOP이면 `message=E_STOP`) |
+| `dt_fake_unity/fake_scene.py` | 가짜 장면 상태 (적재함, 컨베이어, 불량 칸, 대기 칸 2개, AGV). rclpy 없는 순수 Python |
+| `test/test_fake_scene.py` | fake_scene 단위 테스트 (`colcon test`) |
+| `dt_fake_unity/fake_panel.py` | 터미널 키 입력으로 버튼 흉내: s=동작, e=비상정지, 1=불량 팔레트 정리, 2=출고 팔레트 정리, f=고장 주입, c=조치 완료 |
+| `config/fake_scenario.yaml` | 박스 순서(정상·불량), 라인·AGV·팔 동작 시간, 실패를 일부러 낼 팔 번호, 적재함 수 |
 
 ### 1.7 `dt_bringup/` — [D] · scope `bringup`
 실행과 **코드 수정 없이 바꾸는 설정값**(NFR-09)을 모은다.
