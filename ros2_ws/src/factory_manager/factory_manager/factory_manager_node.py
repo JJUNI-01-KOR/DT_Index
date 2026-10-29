@@ -4,25 +4,32 @@
 """
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import String, Bool 
+from std_msgs.msg import String, Bool
 
-# 공정 상태 
+# 공정 상태
 IDLE = 'IDLE'
 RUNNING = 'RUNNING'
 PALLET_FULL = 'PALLET_FULL'
 ERROR = 'ERROR'
 E_STOP = 'E_STOP'
 
+
 class FactoryManager(Node):
 
     def __init__(self):
         super().__init__('factory_manager')
-        self.state = IDLE 
+        self.state = IDLE
         self.state_pub = self.create_publisher(String, '/factory/state', 10)
         self.conveyor_pub = self.create_publisher(Bool, '/conveyor/cmd', 10)
-        self.conveyor_on = None # 마지막으로 보낸 컨베이어 명령 변수로 담음 . None = 아직 안 보냄 
+        self.conveyor_on = None  # 마지막으로 보낸 컨베이어 명령 변수로 담음 . None = 아직 안 보냄
         self.create_subscription(Bool, '/factory/start', self.on_start, 10)
+        self.create_subscription(Bool, '/factory/emergency_stop', self.on_emergency_stop, 10)
+        self.declare_parameter('state_publish_period_sec', 1.0)
+        period = self.get_parameter('state_publish_period_sec').value
+        self.create_timer(period, self.publish_state)
+
         self.get_logger().info('factory_manager 시작 (뼈대)')
+
         # TODO 구독: /factory/start, /factory/emergency_stop, /pallet_1_reset, /pallet_2_reset, /factory/inject_fault, /factory/fault_clear
         # TODO 구독: /bin/count, /conveyor/box_count, /detect_1_event, /detect_2_event, /agv_1_status, /pallet_2_count, /factory/heartbeat_unity
         # TODO 발행: /conveyor/cmd, /factory/state(1초+변경 시), /factory/stats(1초, JSON), /factory/heartbeat_ros(1초), /agv_1_cmd(depart | return)
@@ -47,17 +54,17 @@ class FactoryManager(Node):
         msg = String()
         msg.data = self.state
         self.state_pub.publish(msg)
-    
+
     def set_conveyor(self, on):
         """컨베이어 가동 (true) 정지 (false) 같은 명령은 다시 보내지 않는다."""
         if on == self.conveyor_on:
             return
         self.conveyor_on = on
         msg = Bool()
-        msg.data = on 
+        msg.data = on
         self.conveyor_pub.publish(msg)
         self.get_logger().info(f'컨베이어 {"가동" if on else "정지"}')
-    
+
     def on_start(self, msg):
         """[동작] 버튼 눌렀을 때 IDLE에서만 RUNNING으로 바꾸고 컨베이어를 가동한다."""
         if not msg.data:
@@ -67,6 +74,15 @@ class FactoryManager(Node):
             return
         self.set_state(RUNNING)
         self.set_conveyor(True)
+
+    def on_emergency_stop(self, msg):
+        """비상정지 (FR-16). 누르면 E_STOP, 해제하면 IDLE"""
+        if msg.data:
+            self.set_conveyor(False)
+            self.set_state(E_STOP)
+        elif self.state == E_STOP:
+            self.set_state(IDLE)
+
 
 def main(args=None):
     rclpy.init(args=args)
