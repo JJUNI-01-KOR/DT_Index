@@ -5,6 +5,7 @@ factory_manager:
   ros__parameters:
     feed_stop_count: 4          # 라인 위 박스가 이 수 이상이면 투입 중지 (FR-04)
     feed_resume_count: 3        # 이 수 이하가 되면 투입 재개 (FR-04)
+    pallet_capacity: 12         # 팔레트 가득 판단 (FR-14). palletizer_node와 같은 값
     heartbeat_period_sec: 1.0   # Heartbeat 발행 주기 (FR-17)
     heartbeat_timeout_sec: 3.0  # 이 시간 동안 수신이 없으면 E_STOP (FR-17)
     state_publish_period_sec: 1.0
