@@ -11,13 +11,14 @@ import os
 import rclpy
 import yaml
 from ament_index_python.packages import PackageNotFoundError, get_package_share_directory
+from factory_interfaces.msg import DetectEvent
 from factory_interfaces.srv import PickPlace
 from geometry_msgs.msg import Pose
 from rclpy.node import Node
 from std_msgs.msg import Bool, Int32, String
 
-from .fsm import Fsm, RUNNING
-from .line_rules import FeedGate
+from .fsm import E_STOP, Fsm, RUNNING
+from .line_rules import FeedGate, SlotWait
 
 
 def default_line_coords():
@@ -73,6 +74,11 @@ class FactoryManager(Node):
         self.create_subscription(Int32, '/conveyor/box_count', self.on_box_count, 10)
         self.bin_count = 0  # 적재함 남은 박스 수
         self.create_subscription(Int32, '/bin/count', self.on_bin_count, 10)
+        # 칸 가득 대기 (FR-07, FR-10)
+        self.slots = SlotWait()
+        self.reject_count = 0  # 불량 수 (FR-07, /factory/stats에서 씀)
+        self.create_subscription(DetectEvent, '/detect_1_event', self.on_detect, 10)
+        self.create_subscription(DetectEvent, '/detect_2_event', self.on_detect, 10)
         # 로봇팔1 투입
         self.arm1 = self.create_client(PickPlace, '/arm_1_pick_place')
         self.arm1_busy = False  # 요청을 보내고 응답을 기다리는 중
@@ -110,7 +116,11 @@ class FactoryManager(Node):
             self.apply('[동작]', self.fsm.on_start)
 
     def on_estop(self, msg):
+        released = not msg.data and self.fsm.state == E_STOP
         self.apply('비상정지' if msg.data else '비상정지 해제', self.fsm.on_estop, msg.data)
+        if released:  # FR-16 6단계: Unity가 라인과 칸의 박스를 치우므로 칸 상태와 불량 수를 0으로
+            self.slots.reset()
+            self.reject_count = 0
 
     def on_box_count(self, msg):
         """라인 위 박스 수 (FR-04). 4개 이상이면 투입 중지, 3개 이하면 재개."""
@@ -126,13 +136,24 @@ class FactoryManager(Node):
         self.bin_count = msg.data
         self.step()
 
+    def on_detect(self, msg):
+        """칸 감지 이벤트 (FR-07, FR-09, FR-10). 칸이 차서 기다리면 정지, 칸에 들어가면 재가동."""
+        if not self.slots.update(msg.zone):
+            self.get_logger().warn(f'모르는 zone {msg.zone} ({msg.box_id})')
+            return
+        if msg.zone == 'reject':
+            self.reject_count += 1
+        waiting = ', '.join(sorted(self.slots.waiting)) or '없음'
+        self.get_logger().info(f'{msg.zone} {msg.box_id}, 대기: {waiting}')
+        self.step()
+
     def publish_state(self):
         self.state_pub.publish(String(data=self.fsm.state))
 
     def step(self):
         """장비 명령은 여기서만 정한다."""
         run = self.fsm.state == RUNNING
-        self.set_conveyor(run)
+        self.set_conveyor(run and not self.slots.blocked())
         if run and self.bin_count > 0 and self.feed_open and self.conveyor_on and not self.arm1_busy:
             self.feed()
 
