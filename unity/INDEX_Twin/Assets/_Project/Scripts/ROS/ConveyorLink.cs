@@ -1,4 +1,4 @@
-// 컨베이어 ↔ ROS2 연결 (FR-03, FR-04). 담당 A · scope unity-ros
+// ConveyorLink.cs : 컨베이어 ↔ ROS2 연결 (FR-03, FR-04). 담당 A · scope unity-ros
 // ROS 통신은 Scripts/ROS/ 에서만 한다 (CONVENTIONS 3절). Conveyor.cs는 ROS를 모른다.
 //
 //   구독: /conveyor/cmd        (std_msgs/Bool)  true=가동, false=정지
@@ -13,7 +13,7 @@ using UnityEngine;
 using Unity.Robotics.ROSTCPConnector;
 using RosMessageTypes.Std;
 
-public class ConveyorRosLink : MonoBehaviour
+public class ConveyorLink : MonoBehaviour
 {
     [SerializeField] private Conveyor conveyor;
 
@@ -24,7 +24,7 @@ public class ConveyorRosLink : MonoBehaviour
     void Start()
     {
         if (conveyor == null) conveyor = GetComponent<Conveyor>();
-        if (conveyor == null) { Debug.LogError("[ConveyorRosLink] Conveyor가 연결되지 않음", this); enabled = false; return; }
+        if (conveyor == null) { Debug.LogError("[ConveyorLink] Conveyor가 연결되지 않음", this); enabled = false; return; }
 
         ros = ROSConnection.GetOrCreateInstance();
         ros.RegisterPublisher<Int32Msg>(TopicNames.ConveyorBoxCount);

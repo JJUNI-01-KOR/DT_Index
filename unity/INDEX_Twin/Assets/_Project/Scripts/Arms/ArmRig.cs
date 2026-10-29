@@ -18,8 +18,14 @@ public class ArmRig : MonoBehaviour
     [Tooltip("비워두면 Awake에서 자동으로 찾는다 (계층 순서 = URDF 관절 순서)")]
     [SerializeField] private ArticulationBody[] joints = new ArticulationBody[6];
 
-    [Tooltip("그리퍼 끝 위치. wrist3_link 아래 빈 오브젝트 (2.5 그리퍼에서 사용)")]
+    [Tooltip("흡착 기준점 (패드 아래 표면). 작업 가이드의 GripPoint와 같은 것")]
     [SerializeField] private Transform toolPoint;
+
+    [Tooltip("홈 자세 (라디안 6개). 팔이 벨트·적재함 위를 가리지 않는 자세로 정한다 (3.3)")]
+    [SerializeField] private float[] homeRad = new float[6];
+
+    [Tooltip("Play 시작할 때 홈 자세로 바로 맞출지")]
+    [SerializeField] private bool goHomeOnStart = true;
 
     [Header("관절 드라이브 (팔이 처지거나 떨리면 조절)")]
     [SerializeField] private float stiffness = 10000f;
@@ -44,6 +50,9 @@ public class ArmRig : MonoBehaviour
 
     public int ArmId => armId;
     public Transform ToolPoint => toolPoint;
+    /// <summary>작업 가이드 코드 호환용 (ToolPoint와 같음)</summary>
+    public Transform GripPoint => toolPoint;
+    public float[] HomeRad => homeRad;
     public ArticulationBody[] Joints => joints;
 
     /// <summary>목표 자세로 이동 중이면 true (IDLE/MOVING 상태 보고용)</summary>
@@ -64,6 +73,15 @@ public class ArmRig : MonoBehaviour
         var root = GetComponentInChildren<ArticulationBody>();
         if (root != null && root.isRoot) root.immovable = true;
     }
+
+    void Start()
+    {
+        if (goHomeOnStart && homeRad != null && homeRad.Length == joints.Length)
+            SetJointTargetsImmediate(homeRad);
+    }
+
+    /// <summary>홈 자세로 부드럽게 이동</summary>
+    public void GoHome() => SetJointTargets(homeRad);
 
     [ContextMenu("관절 자동 찾기")]
     public void AutoFindJoints()
@@ -146,6 +164,8 @@ public class ArmRig : MonoBehaviour
         {
             WriteDriveTarget(i, Mathf.Lerp(startDeg[i], goalDeg[i], s));
 
+            // 물리 첫 스텝 전에는 jointPosition이 비어 있을 수 있음
+            if (joints[i].jointPosition.dofCount == 0) { allReached = false; continue; }
             float actualDeg = joints[i].jointPosition[0] * Mathf.Rad2Deg;
             if (Mathf.Abs(actualDeg - goalDeg[i]) > arriveToleranceDeg)
                 allReached = false;
@@ -198,9 +218,21 @@ public class ArmRig : MonoBehaviour
         return joints.Select(j => j.jointPosition.dofCount > 0 ? j.jointPosition[0] : 0f).ToArray();
     }
 
+    // ── 작업 가이드 코드 호환용 (double 버전) ──
+    public void SetJointTargets(double[] radians) => SetJointTargets(ToFloat(radians));
+    public void SetJointTargetsImmediate(double[] radians) => SetJointTargetsImmediate(ToFloat(radians));
+    public double[] GetJointRad() => GetJointPositions().Select(v => (double)v).ToArray();
+    static float[] ToFloat(double[] d) => d?.Select(v => (float)v).ToArray();
+
     // ── 테스트용: Play 중 컴포넌트 우클릭 메뉴에서 실행 ──
-    [ContextMenu("테스트: 홈 자세 (전부 0)")]
-    void TestHome() => TestMove(new float[6]);
+    [ContextMenu("테스트: 홈 자세")]
+    void TestHome() => TestMove(homeRad);
+
+    [ContextMenu("테스트: 관절 전부 0")]
+    void TestZero() => TestMove(new float[6]);
+
+    [ContextMenu("현재 관절값을 Console에 출력 (홈 자세 정할 때)")]
+    void PrintJoints() => Debug.Log($"[{ArmName}] 관절(rad): {string.Join(", ", GetJointPositions().Select(v => v.ToString("F3")))}", this);
 
     [ContextMenu("테스트: 자세 A")]
     void TestPoseA() => TestMove(new[] { 0.5f, -0.5f, 0.8f, 0f, 0.5f, 0f });

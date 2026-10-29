@@ -4,11 +4,8 @@
 TagManager:
   serializedVersion: 3
   tags:
-
   - robot
-
-  - NormalBox
-
+  - Box
   layers:
   - Default
   - TransparentFX

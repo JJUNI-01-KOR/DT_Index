@@ -22,7 +22,7 @@ public class BufferZoneSensor : MonoBehaviour
     void OnTriggerEnter(Collider other)
     {
         
-        if (other.CompareTag("NormalBox"))
+        if (other.CompareTag("Box"))
         {
             Rigidbody rb = other.GetComponent<Rigidbody>();
             if (rb.isKinematic) return;

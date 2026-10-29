@@ -68,7 +68,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 2966bff73effac54a97e7ea61b72819a, type: 2}
+  - {fileID: 2100000, guid: 98d56bfa8faf0e04da4fb559f5005af5, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -155,7 +155,7 @@ Transform:
   m_GameObject: {fileID: 4484307477479615400}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -5.01, y: 0.147, z: 1.64}
+  m_LocalPosition: {x: -5.01, y: 0.151, z: 1.64}
   m_LocalScale: {x: 0.6104186, y: 0.006406013, z: 0.6059253}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -194,7 +194,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 2966bff73effac54a97e7ea61b72819a, type: 2}
+  - {fileID: 2100000, guid: 68f3e1f0600e21e44b314b85d474378f, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -267,7 +267,7 @@ Transform:
   m_GameObject: {fileID: 4519229565578128215}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -5.007, y: 0.147, z: 2.332}
+  m_LocalPosition: {x: -5.007, y: 0.15, z: 2.332}
   m_LocalScale: {x: 0.6104186, y: 0.006406013, z: 0.6059253}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -306,7 +306,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 2966bff73effac54a97e7ea61b72819a, type: 2}
+  - {fileID: 2100000, guid: 68f3e1f0600e21e44b314b85d474378f, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -360,6 +360,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3746811805116259635}
+  - component: {fileID: 8850956252547736754}
   m_Layer: 0
   m_Name: BufferZoneSensor
   m_TagString: Untagged
@@ -386,6 +387,20 @@ Transform:
   - {fileID: 6192704661514266739}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8850956252547736754
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6855092363381432796}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e7e7bbf606b517c4093d37831789819e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BufferZoneSensor
+  end1_Pos: {fileID: 0}
+  end2_Pos: {fileID: 0}
 --- !u!1 &8227196688848062804
 GameObject:
   m_ObjectHideFlags: 0
@@ -453,7 +468,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 2966bff73effac54a97e7ea61b72819a, type: 2}
+  - {fileID: 2100000, guid: 5974c802b6c228346a5cb9f87f7af4fc, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0

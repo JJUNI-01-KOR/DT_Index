@@ -48,6 +48,11 @@ public class BoxBin : MonoBehaviour
     [SerializeField] private int randomSeed = 0;
 
     private static int nextIdNumber = 1;                    // BOX_001부터, 재충전해도 리셋 안 함
+
+    // 이 프로젝트는 Enter Play Mode Options로 Domain Reload를 끔 → static 값이 Play 사이에 남는다.
+    // Play를 새로 누를 때마다 BOX_001부터 다시 시작하게 초기화.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics() => nextIdNumber = 1;
     private readonly List<Box> slots = new List<Box>();     // 칸 순서대로 (빈 칸은 null)
     private int nextSlot;                                   // 다음에 꺼낼 칸 번호 (0부터)
     private System.Random rng;
