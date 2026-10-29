@@ -4,7 +4,7 @@
 """
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import String, Bool
+from std_msgs.msg import String, Bool, Int32
 
 # 공정 상태
 IDLE = 'IDLE'
@@ -27,6 +27,14 @@ class FactoryManager(Node):
         self.declare_parameter('state_publish_period_sec', 1.0)
         period = self.get_parameter('state_publish_period_sec').value
         self.create_timer(period, self.publish_state)
+        # 라인 위 박스 관련
+        self.declare_parameter('feed_stop_count', 4)
+        self.declare_parameter('feed_resume_count', 3)
+        self.feed_stop_count = self.get_parameter('feed_stop_count').value
+        self.feed_resume_count = self.get_parameter('feed_resume_count').value
+        self.box_count = 0  # 라인 위 박스 수
+        self.feed_allowed = True  # 로봇팔 투입 여부
+        self.create_subscription(Int32, '/conveyor/box_count', self.on_box_count, 10)
 
         self.get_logger().info('factory_manager 시작 (뼈대)')
 
@@ -82,6 +90,16 @@ class FactoryManager(Node):
             self.set_state(E_STOP)
         elif self.state == E_STOP:
             self.set_state(IDLE)
+
+    def on_box_count(self, msg):
+        """라인 위 박스 수 (FR-04). 4개 이상이면 투입 중지, 3개 이하면 재개."""
+        self.box_count = msg.data
+        if self.feed_allowed and self.box_count >= self.feed_stop_count:
+            self.feed_allowed = False
+            self.get_logger().info(f'라인 위 박스 {self.box_count}개, 투입 중지')
+        elif not self.feed_allowed and self.box_count <= self.feed_resume_count:
+            self.feed_allowed = True
+            self.get_logger().info(f'라인 위 박스 {self.box_count}개, 투입 재개')
 
 
 def main(args=None):
