@@ -13,7 +13,7 @@
 ## config
 | 파일 | 내용 |
 |---|---|
-| `factory.yaml` | 공정 설정값 (SRS v3.1 A.5): 정상 무게 범위, 레인 용량 3, 적재 기준 5, 집기 제한 20초, 감시 시간(무게 보고 15초, AGV1 30초), Heartbeat 1초/3초. v2.2 키는 factory_manager 전환 때 지운다 |
+| `factory.yaml` | 공정 설정값 (SRS v3.1 A.5): 정상 무게 범위, 레인 용량 3, 적재 기준 5, 집기 제한 20초, 감시 시간(무게 보고 15초, AGV1 30초), Heartbeat 1초/3초. 키는 factory_manager가 선언하는 파라미터와 같다 |
 | `line_coords.yaml` | 라인 좌표표 v3.1 이름 (값 0.0 = 아직 안 채움, 4명 합의 후 변경) |
 | `agv_waypoints.yaml` | AGV1 정지 지점 4곳(HOME, P1_DOCK, P2_DOCK, FINAL)과 일방통행 경로점 |
 | `fake_scenario.yaml` | 가짜 Unity 박스 순서·이동 시간·실패 팔 |
