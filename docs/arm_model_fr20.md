@@ -82,6 +82,6 @@ wrist3_link
 | 4.2 회의에서 FR20 확정, 제어 방식(ROS2 관절값 / Unity IK)과 함께 결정 | 전원 | |
 | ✅ 팔 공통 프리팹을 FR20으로 교체 (`Arm_Fairino.prefab`, Scale 1, 베이스 고정, Arm_Body/Arm_Joint 머티리얼) | D (A에서 이관) | 10/30 완료. 루트(UrdfRobot·ArmRig·KinematicGripper)는 그대로 두고 그 아래만 FR20으로 바꿔 프리팹 GUID와 참조 유지. Suction 0.120, ToolPoint 0.205, Controller 없음. Play 시험: 기본 드라이브값으로 홈 자세 처짐 0.3° 이내, 자세 이동 오차 0.24°, 흡착 후 방석 따라옴 |
 | 씬의 RobotArm_1~4를 새 프리팹으로 교체, Scale 1 | 각 팔 담당 / Main은 D | DT_Main의 비교용 `fairino20_v6_robot`은 그때 삭제 |
-| 팔 높이를 받침대로 맞춤 (Scale 금지) | 각 팔 담당 | |
+| 팔 높이를 받침대로 맞춤 (Scale 금지) | 각 팔 담당 | 10/30 IK 시험(팔3): 지금 자리 Unity (-16.5, 0, 5.4)는 파레트 3단까지만 닿음. **(-16.75, 0.7, 5.3)** 즉 집는 자리와 파레트 사이 가운데 + 받침대 0.7 m면 집는 자리와 5단(접근 0.3 m 포함) 모두 닿고 1회 7~8.5초. (-17.0, 0.5, 5.3)도 가능. 팔2는 z만 반대쪽으로 같은 배치 권장 |
 | `line_coords.yaml` 팔 베이스·집기 좌표 갱신 | 전원 합의 | |
 | ROS2 관절 제어로 가면 `dt_arm`을 FR20 치수로 (`fairino20_v6_moveit2_config` 참고) | A | |
