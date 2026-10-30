@@ -6,6 +6,8 @@ TagManager:
   tags:
   - robot
   - Box
+  - NormalBox
+  - Cushion
   layers:
   - Default
   - TransparentFX
