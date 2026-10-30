@@ -1,18 +1,36 @@
 # 라인 좌표표 (ROS 좌표, m · rad). 원본: docs/line_coords.md
-# ⚠ 2026.10.28 확정 전 임시값. 바꾸려면 4명 합의 (SRS 6장).
-# 형식: 이름: {x, y, z, yaw}
+# 기준: SRS v3.1 6장 "라인 좌표표". 2026.11.02까지 확정, 바꾸려면 4명 합의. 정리 담당 D.
+#
+# 사용법
+# - 형식: 이름: {x, y, z, yaw}. Unity에서 잰 위치를 CoordConverter(To<FLU>)로 바꾼 값을 넣는다.
+# - 0.0은 "아직 안 채움"이다. 값을 비우면(null) factory_manager가 읽다가 멈추므로 숫자로 둔다.
+# - 이름은 코드가 그대로 읽는다. 바꾸려면 읽는 노드(괄호 안)와 같은 PR에서 바꾼다.
+# - 목록([])은 factory_manager의 load_poses가 건너뛴다. 칸이 여러 개인 곳에 쓴다.
 
-bin_slots: []                 # 적재함 칸 20개
-feed_point:     {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}   # 컨베이어 투입 위치
-size_gate:      {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}
-reject_slot:    {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}
-end_slot_1:     {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}
-end_slot_2:     {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}
-arm_1_base:     {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}
-arm_2_base:     {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}
-arm_3_base:     {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}
-arm_4_base:     {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}
-agv_load_stop:  {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}   # 상차 구역 정지 위치
-agv_unload_stop: {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}  # 출고 팔레트 구역 정지 위치
-pallet_1_origin: {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}  # 불량 팔레트
-pallet_2_origin: {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}  # 출고 팔레트 1번 칸 기준
+# ── 투입 (로봇팔1, A) ──
+bin_slots: []                 # 적재함 칸 20개. 칸 순서대로 {x, y, z, yaw} 목록 (factory_manager)
+feed_point:      {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}   # 컨베이어 투입 위치. 팔1 place_pose (factory_manager)
+
+# ── 검사·분기 (B) ──
+scale_1:         {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}   # 무게 센서 구간 중심
+diverter_1:      {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}   # ㄷ자 갈림길 분기 게이트. 센서와 0.3 m 이상 (SRS A.5)
+
+# ── 레인 끝 집는 자리 (A) ──
+pick_ok:         {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}   # 정상 레인 집는 자리. 팔2 pick_pose (palletizer_1)
+pick_ng:         {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}   # 불량 레인 집는 자리. 팔3 pick_pose (palletizer_2)
+
+# ── 로봇팔 베이스 (팔1 A, 팔2 B, 팔3 D) ──
+arm_1_base:      {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}
+arm_2_base:      {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}
+arm_3_base:      {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}
+
+# ── 파레트 자리 (D). z는 파레트 상면. k단 놓기 = 상면 + (k-1) × 방석 높이 (palletizer) ──
+pallet_1:        {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}   # 정상 (팔2 옆)
+pallet_2:        {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}   # 불량 (팔3 옆)
+
+# ── 예비 파레트 자리 (D). 파레트1은 위쪽, 파레트2는 아래쪽 레일 ──
+spare_1:         {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}
+spare_2:         {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}
+
+# ── 최종 구역 (D). AGV1 웨이포인트는 agv_waypoints.yaml ──
+final_zone:      {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}

@@ -2,8 +2,6 @@
 import os
 
 from ament_index_python.packages import get_package_share_directory
-from launch.conditions import IfCondition
-from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 
@@ -12,11 +10,14 @@ def config_path(name):
 
 
 def control_nodes():
-    """공정 제어 노드 (Unity든 fake든 공통)."""
-    factory_yaml = config_path('factory.yaml')
-    use_ros_arm = LaunchConfiguration('use_ros_arm')
+    """공정 제어 노드 (Unity든 fake든 공통).
 
-    nodes = [
+    로봇팔은 Unity IK로 움직이므로 ROS 팔 노드는 없다 (10.30 확정, SRS v3.1).
+    /arm_N_pick_place 서버는 Unity ArmPickPlaceServer.cs가 맡는다.
+    """
+    factory_yaml = config_path('factory.yaml')
+
+    return [
         Node(package='factory_manager', executable='factory_manager_node',
              name='factory_manager', parameters=[factory_yaml],
              output='screen', emulate_tty=True),
@@ -27,11 +28,3 @@ def control_nodes():
              name='agv_1_controller', parameters=[factory_yaml],
              output='screen', emulate_tty=True),
     ]
-    # ⚠ 10/30 결정: ROS2가 관절을 제어하는 경우에만 켠다 (use_ros_arm:=true)
-    for i in range(1, 5):
-        nodes.append(
-            Node(package='dt_arm', executable='arm_controller_node',
-                 name=f'arm_{i}_controller', parameters=[{'arm_id': i}],
-                 condition=IfCondition(use_ros_arm),
-                 output='screen', emulate_tty=True))
-    return nodes

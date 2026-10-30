@@ -1,21 +1,39 @@
 # 공정 설정값 — 코드 수정 없이 바꾸는 값 (NFR-09). 단위는 이름에 포함.
 # 노드 이름 아래 ros__parameters 형식. launch에서 각 노드에 이 파일을 넘긴다.
+# 기준: SRS v3.1 부록 A.5. factory_manager와 palletizer가 같이 쓰는 값은 두 곳에 같은 값을 적는다.
+#
+# 사용법
+# - 실수 값은 1.0처럼 소수점을 붙인다 (정수로 쓰면 파라미터 형식 오류로 노드가 안 뜬다).
+# - 노드가 declare_parameter로 선언하지 않은 키는 무시된다. v3.1 키는 노드를 고칠 때 선언해서 읽는다.
+# - 0.0은 "아직 안 채움"이다 (팀 결정 후 채운다).
 
 factory_manager:
   ros__parameters:
-    feed_stop_count: 4          # 라인 위 박스가 이 수 이상이면 투입 중지 (FR-04)
-    feed_resume_count: 3        # 이 수 이하가 되면 투입 재개 (FR-04)
+    # ── 지금 코드가 읽는 값 ──
+    feed_stop_count: 4          # v2.2: 라인 위 박스가 이 수 이상이면 투입 중지. v3.1 전환 시 lane_capacity_count로 바꾸고 지운다
+    feed_resume_count: 3        # v2.2: 이 수 이하가 되면 투입 재개. v3.1 전환 시 지운다
     heartbeat_period_sec: 1.0   # Heartbeat 발행 주기 (FR-17)
     heartbeat_timeout_sec: 3.0  # 이 시간 동안 수신이 없으면 E_STOP (FR-17)
     state_publish_period_sec: 1.0
     stats_publish_period_sec: 1.0
+    # ── v3.1 (B가 factory_manager를 v3.1으로 고칠 때 선언해서 읽는다) ──
+    normal_weight_min_kg: 0.90  # 정상 판정 하한, 포함 (FR-07, 제안값)
+    normal_weight_max_kg: 1.10  # 정상 판정 상한, 포함 (FR-07, 제안값)
+    lane_capacity_count: 3      # main+ok 또는 main+ng가 이 수 이상이면 투입 중지 (FR-04)
+    load_timeout_sec: 3.0       # /conveyor_1_load를 이 시간 못 받으면 투입 요청 안 함 (FR-04)
+    pick_timeout_sec: 20.0      # 팔1 집기 응답 제한. 응답이 아예 안 오면 실패 (FR-18)
+    weight_report_timeout_sec: 15.0  # 팔1 투입 성공 뒤 이 시간 안에 무게 보고가 없으면 E_STOP(timeout_weight) (FR-02, 제안값)
+    agv_timeout_sec: 30.0       # PN_DOCK·FINAL 뒤 이 시간 안에 /agv_1_loaded가 안 바뀌면 E_STOP(timeout_agv) (FR-13, 제안값)
+    # pallet_capacity: 5        # 적재 기준 1×5 (FR-12). 지금 코드가 v2.2 기본값 12로 읽고 있어서
+                                # v3.1 전환 PR에서 주석을 푼다. palletizer와 같은 값
 
+# v3.1에서는 palletizer_1(ok)·palletizer_2(ng) 두 노드로 띄운다 (C). 노드 이름을 바꿀 때 이 키도 바꾼다.
 palletizer_node:
   ros__parameters:
-    pallet_capacity: 12         # 출고 팔레트 적재 수 (2x2, 3단) (FR-14)
-    pallet_cols: 2
-    pallet_rows: 2
-    pallet_layers: 3
+    lane: ok                    # ok → 팔2·파레트1, ng → 팔3·파레트2
+    pallet_capacity: 5          # 적재 기준. factory_manager와 같은 값 (FR-10, 11)
+    cushion_height_m: 0.0       # 방석 높이. k단 놓기 = 파레트 상면 + (k-1) × 이 값 (⚠ 방석 모델 결정 후)
+    pick_timeout_sec: 20.0      # 팔2·3 집기 응답 제한. Unity 팔 서버의 동작 제한 15초(Inspector)보다 길게 (FR-18)
 
 agv_1_controller:
   ros__parameters:

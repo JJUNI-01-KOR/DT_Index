@@ -7,7 +7,6 @@ import os
 import sys
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
 from launch_ros.actions import Node
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -16,7 +15,6 @@ from _common import config_path, control_nodes  # noqa: E402
 
 def generate_launch_description():
     return LaunchDescription([
-        DeclareLaunchArgument('use_ros_arm', default_value='false'),
         Node(package='dt_fake_unity', executable='fake_unity_node',
              name='fake_unity', parameters=[config_path('fake_scenario.yaml')],
              output='screen', emulate_tty=True),

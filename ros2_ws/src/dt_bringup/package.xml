@@ -14,7 +14,6 @@
   <exec_depend>ros_tcp_endpoint</exec_depend>
   <exec_depend>factory_interfaces</exec_depend>
   <exec_depend>factory_manager</exec_depend>
-  <exec_depend>dt_arm</exec_depend>
   <exec_depend>dt_agv</exec_depend>
   <exec_depend>dt_palletizer</exec_depend>
   <exec_depend>dt_fake_unity</exec_depend>
