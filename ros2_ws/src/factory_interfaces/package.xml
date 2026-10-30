@@ -3,7 +3,7 @@
 <package format="3">
   <name>factory_interfaces</name>
   <version>0.0.1</version>
-  <description>INDEX 공정 커스텀 메시지 (DetectEvent.msg, PickPlace.srv)</description>
+  <description>INDEX 공정 커스텀 서비스 (PickPlace.srv)</description>
   <maintainer email="index-team@example.com">INDEX</maintainer>
   <license>Apache-2.0</license>
 

@@ -39,6 +39,9 @@ unity/INDEX_Twin/.vs/
 unity/INDEX_Twin/.vsconfig
 unity/INDEX_Twin/sysinfo.txt
 unity/INDEX_Twin/crashlytics-buildid.txt
+# Unity가 비정상 종료 후 만드는 씬 복구 파일
+unity/INDEX_Twin/Assets/_Recovery/
+unity/INDEX_Twin/Assets/_Recovery.meta
 
 # 구매 에셋: 공개 저장소·Git에 올리지 않는다 (SRS 2.4). 팀원끼리 별도 공유
 unity/INDEX_Twin/Assets/ThirdParty/
