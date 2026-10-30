@@ -182,7 +182,7 @@ class FactoryManager(Node):
         # TODO(FR-07): grading.parse_weight → grader.grade → stats 정상·불량 수 +1, 이벤트 로그
         if self.fsm.state == E_STOP:
             return
-         cushion, kg = parse_weight(msg.data)
+        cushion, kg = parse_weight(msg.data)
         if cushion is None:
             self.get_logger().warn(f'방석 id가 없는 무게 보고라 분기 명령을 보낼 수 없음: {msg.data}')
             return
