@@ -1,7 +1,7 @@
 # INDEX · 로봇팔·AGV 협업 공정의 Unity–ROS2 디지털 트윈
 
-물류센터 출고 라인 하나(로봇팔 4대, 컨베이어 1대, AGV 1대)를 **Unity**로 시뮬레이션하고 **ROS2 Humble** 노드로 제어한다.
-적재함의 박스가 크기 검사를 거쳐, 규격 초과 박스는 불량 팔레트로, 정상 박스는 AGV를 거쳐 출고 팔레트로 간다.
+방석 분류 라인 하나(로봇팔 3대, ㄷ자 컨베이어 1대, 무게 센서 1개, AGV 1대, 파레트 2개)를 **Unity**로 시뮬레이션하고 **ROS2 Humble** 노드로 제어한다 (SRS v3.1).
+적재함의 방석이 무게 검사를 거쳐 정상은 파레트1, 불량은 파레트2에 5단으로 쌓이고, 가득 찬 파레트는 AGV1이 최종 구역으로 끌고 간다.
 
 ```
  Windows PC                                         Ubuntu 22.04 VM (브리지)
@@ -17,12 +17,12 @@
 
 | 역할 | 담당 | ROS2 | Unity |
 |---|---|---|---|
-| A 로봇팔1·투입·대시보드 | | `dt_arm` | 팔 공통 프리팹, 팔1, 적재함·박스, 컨베이어, 대시보드 |
-| B 로봇팔2·공정 제어 | | `factory_manager`, `factory_interfaces` | 게이트, 푸셔, 불량 칸·팔레트, 팔2 |
-| C 로봇팔3·AGV1 | | `dt_agv` | 대기 칸 2개, 팔3, AGV1 주행 |
-| D 로봇팔4·연동·통합 | | `dt_palletizer`, `dt_fake_unity`, `dt_bringup` | 팔4, 출고 팔레트, ROS 연결, 메인 씬, 버튼 |
+| A 로봇팔1·투입 + 컨베이어 · 상태 패널 | 권오민 | — (팔1 호출은 factory_manager) | 팔1 좌표, 적재함·방석, 컨베이어 레인 2개, 레인 끝, 상태 패널 |
+| B 로봇팔2·정상 적재 + 공정 제어 | 김예은 | `factory_manager`, `factory_interfaces` | 무게 센서, 분기 게이트, 팔2 좌표 |
+| C AGV1 제어 + 팔레타이징 (ROS2 전용) | 박준영 | `dt_agv`, `dt_palletizer`, `dt_fake_unity`, `dt_bringup`(launch) | — |
+| D 로봇팔3·불량 적재 + 연동·통합 | 김찬중 | `dt_bringup`(좌표표) | 팔 공통 pick·place(Unity IK), 팔3, AGV1·파레트·최종 구역, 제어 패널, ROS 연결, 메인 씬 |
 
-팀원: 권오민, 김예은, 김찬중, 박준영
+폴더·파일별 담당은 [docs/FOLDER_STRUCTURE.md](docs/FOLDER_STRUCTURE.md).
 
 ## 빠른 시작
 
@@ -39,7 +39,7 @@ colcon build --symlink-install && source install/setup.bash
 | 목적 | VM | Windows |
 |---|---|---|
 | 연결 확인 | `ros2 launch dt_bringup connect.launch.py` | `Sandbox/ConnectionTest` 씬 Play |
-| 전체 시연 | `ros2 launch dt_bringup factory.launch.py` | `Main` 씬 Play → [동작] |
+| 전체 시연 | `ros2 launch dt_bringup factory.launch.py` | `Main` 씬 Play → [해제] → [시작] (factory_manager는 E_STOP으로 시작, SRS v3.1) |
 | Unity 없이 | `ros2 launch dt_bringup fake.launch.py` | — |
 
 ## 문서
