@@ -157,6 +157,8 @@ ROS 통신은 **이 폴더에서만** 한다. 다른 스크립트는 여기 이�
 | `HeartbeatLink.cs` | 예정 | `/factory/heartbeat_unity` 1초 발행, `/factory/heartbeat_ros`가 3초 끊기면 장비 정지 + "ROS2 연결 끊김" | FR-17 |
 | `BinLink.cs`, `ConveyorLink.cs` | 수정 | 적재함·컨베이어 토픽 연결 (`/bin/count`, `/conveyor/cmd`, `/conveyor_1_load`) | FR-03~05 |
 | `ConnectionTest.cs` | 수정 | 세팅 검증용. `/detect_1_event` 발행 부분 삭제 | |
+| `LaneEndLink.cs` | 있음 | 레인 끝(Line/LaneEnd.cs) 1번 칸에 방석이 들어올 때마다 `/conveyor_1_end_ok`·`_ng`로 id 1회. E_STOP → IDLE에서 레인 끝 방석 비움 | FR-09, 16 |
+| `ArmPickPlaceServer.cs` | 있음 | `/arm_N_pick_place` 서비스 서버 (팔마다 1개, `armId`로 서비스 이름 결정). 요청 좌표를 Unity로 바꿔 `Arms/ArmPickPlace.Run()` 호출, 결과를 응답. E_STOP이면 진행 중 요청에 `success=false, message=E_STOP`, E_STOP → IDLE이면 팔 초기화 | FR-02, 10, 11, 16, 18 |
 
 ### 2.2 `_Project/Scripts/Arms/` — [D] 공통 · scope `unity-arm`
 팔 3대가 같은 컴포넌트를 쓰고 **Unity IK로 움직인다** (10.30 확정, `/arm_N_joint_states`는 없음). 팔별 배치·좌표는 각 팔 담당: **팔1 A, 팔2 B, 팔3 D**.
@@ -165,8 +167,10 @@ ROS 통신은 **이 폴더에서만** 한다. 다른 스크립트는 여기 이�
 |---|---|---|
 | `ArmRig.cs` | 있음 | 팔 1대의 공통 컴포넌트. `armId`(1~3), ArticulationBody 관절 6개 참조 |
 | `KinematicGripper.cs` | 있음 | 집기 단순화: 방석을 Kinematic으로 바꾸고 그리퍼에 부착, 놓을 때 해제 (SRS 2.5) |
-| `ArmPickPlaceServer.cs` | 예정 | `/arm_N_pick_place` 서비스 서버 (팔마다 1개, `armId`로 서비스 이름 결정). 이동 → 집기 → 놓기 → success. 팔1은 집은 방석 id를 `message`로 반환. E_STOP이면 `success=false, message=E_STOP`. **15초(Inspector) 안에 못 마치면 스스로 멈추고 방석을 집기 좌표에 되돌린 뒤 `success=false`** (적재함 칸 순서는 그대로) |
-| `ArmIkSolver.cs` | 예정 | 목표 Pose → ArticulationBody 관절 목표값 (IK). 접근 → 하강 → 부착 → 상승 → 이동 → 하강 → 분리 → 복귀 순서 |
+| `ArmPickPlace.cs` | 있음 | 집기·놓기 동작 (ROS 모름). 방석 찾기(box_id, 팔1은 pick 위치 근처) → 관절값 4개 미리 계산 → 집기 위 → 집기 → 붙이기 → 집기 위 → 놓기 위 → 놓기 → 떼기 → 놓기 위 → 응답 → 홈. 성공이면 `message`=방석 id. 닿지 않으면 움직이지 않고 `ik_failed:<단계>`. **15초(Inspector) 안에 못 마치면 스스로 멈추고 방석을 집기 좌표에 되돌린 뒤 `success=false`** (`timeout`). `Picked`·`Placed` 이벤트 (적재함 수 갱신 등) |
+| `ArmIk.cs` | 있음 | 6축 IK. 관절 0 자세의 앵커 축으로 정기구학(PoE), 감쇠 최소제곱으로 목표 ToolPoint 위치·방향(공구 아래)을 푼다. 관절 한계 안, 시작값 근처 해 |
+| `ArmPickPlaceServer.cs` | 이동 | ROS 통신이라 `Scripts/ROS/`로 옮김 (2.1) |
+| `ArmIkSolver.cs` | 이름 변경 | `ArmIk.cs` |
 
 ### 2.3 `_Project/Scripts/Line/` — A·B · scope `unity-line`
 방석이 적재함에서 레인 끝 집는 자리까지 가는 설비. **무게 센서와 분기 게이트(B)도 이 폴더**에 둔다.
