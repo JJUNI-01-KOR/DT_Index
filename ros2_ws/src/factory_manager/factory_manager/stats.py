@@ -12,6 +12,14 @@ class Stats:
         self.ng = 0        # 불량 수 (판정할 때 +1)
         self.last = None   # 마지막 판정 {"id", "kg", "lane"}
 
+    def on_graded(self, cushion, kg, lane):
+        """판정 1건 기록 (FR-07 2번). 정상 수 또는 불량 수 +1, 마지막 판정 갱신."""
+        if lane == 'ok':
+            self.ok += 1
+        else:
+            self.ng += 1
+        self.last = {'id': cushion, 'kg': kg, 'lane': lane}
+
     def to_json(self, fsm, bin_left, load, pallets, agv, agv_cycle_sec):
         """부록 A.4 형식의 JSON 문자열.
         키: state, fault, estop, bin_left, fed, ok, ng, last, main, lane_ok, lane_ng,

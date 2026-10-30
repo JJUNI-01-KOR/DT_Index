@@ -21,7 +21,7 @@ from std_msgs.msg import Bool, Int32, String
 
 from .agv_dispatch import AgvDispatcher
 from .fsm import E_STOP, Fsm, IDLE, RUNNING
-from .grading import Grader
+from .grading import Grader, diverter_cmd, parse_weight
 from .line_rules import FeedRule
 from .pallet_queue import PalletBook
 from .stats import Stats
@@ -79,6 +79,7 @@ class FactoryManager(Node):
 
         self.conveyor_on = None  # 마지막으로 보낸 컨베이어 명령. None = 아직 안 보냄
         self.bin_count = 0       # 적재함 남은 방석 수 (/bin/count)
+        self.graded = set()# 이미 판정한 방석
 
         # ── 발행 (SRS v3.1 4.4) ──
         self.state_pub = self.create_publisher(String, '/factory/state', 10)
@@ -143,6 +144,7 @@ class FactoryManager(Node):
         self.agv.reset()
         self.watchdog.reset()
         self.stats.reset()
+        self.graded.clear()
         self.arm1_busy = False
         # TODO(FR-16): /pallet_N_count(0) 발행
 
@@ -178,6 +180,23 @@ class FactoryManager(Node):
     def on_weight(self, msg):
         """/scale_1_weight {"id", "kg"} (FR-06, 07, 08)."""
         # TODO(FR-07): grading.parse_weight → grader.grade → stats 정상·불량 수 +1, 이벤트 로그
+        if self.fsm.state == E_STOP:
+            return
+        cushion, kg = parse_weight(msg.data)
+        if cushion is None:
+            self.get_logger().warn(f'방석 id가 없는 무게 보고라 분기 명령을 보낼 수 없음: {msg.data}')
+            return
+        if cushion in self.graded:
+            self.get_logger().warn(f'{cushion} 무게 보고를 다시 받아 무시 (방석당 1회)')
+            return
+        self.graded.add(cushion)
+
+        lane = self.grader.grade(kg)
+        if kg is None:
+            self.get_logger().warn(f'{cushion} 무게를 읽을 수 없어 불량 처리: {msg.data}')
+        self.stats.on_graded(cushion, kg, lane)
+        self.diverter_pub.publish(String(data=diverter_cmd(cushion, lane)))   # 판정 직후 바로 (NFR-01)
+        self.get_logger().info(f'판정 {cushion} {kg} kg → {lane}')
         # TODO(FR-08): 바로 /diverter_1_cmd {"id", "lane"} 방석당 1회 (NFR-01: 0.5초 이내)
         # TODO(FR-02): feed_rule.on_weight, watchdog.stop_weight
 
