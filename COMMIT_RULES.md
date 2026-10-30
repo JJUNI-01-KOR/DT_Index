@@ -40,19 +40,21 @@
 
 ### scope 목록
 
+담당은 SRS v3.1 역할 (A 권오민, B 김예은, C 박준영, D 김찬중) 기준이다.
+
 | scope | 대상 | 담당 |
 |---|---|---|
 | `interfaces` | `ros2_ws/src/factory_interfaces` | B |
 | `manager` | `ros2_ws/src/factory_manager` | B |
-| `arm` | `ros2_ws/src/dt_arm` | A |
+| `arm` | `ros2_ws/src/dt_arm` (Unity IK 결정으로 사용 안 함, 정리 커밋에만) | D |
 | `agv` | `ros2_ws/src/dt_agv` | C |
-| `palletizer` | `ros2_ws/src/dt_palletizer` | D |
-| `fake` | `ros2_ws/src/dt_fake_unity` | D |
-| `bringup` | `ros2_ws/src/dt_bringup` (launch, config) | D |
-| `unity-arm` | `Assets/_Project/Scripts/Arms`, 팔 프리팹 | A(공통)·각 팔 담당 |
-| `unity-line` | `Assets/_Project/Scripts/Line` | A·B·C |
-| `unity-agv` | `Assets/_Project/Scripts/AGV` | C |
-| `unity-ui` | `Assets/_Project/Scripts/UI` | A·D |
+| `palletizer` | `ros2_ws/src/dt_palletizer` | C |
+| `fake` | `ros2_ws/src/dt_fake_unity` | C |
+| `bringup` | `ros2_ws/src/dt_bringup` (launch, config) | C·D |
+| `unity-arm` | `Assets/_Project/Scripts/Arms`, 팔 프리팹 | D(공통)·각 팔 담당 (팔1 A, 팔2 B, 팔3 D) |
+| `unity-line` | `Assets/_Project/Scripts/Line` (적재함·컨베이어·레인 끝, 무게 센서·분기 게이트) | A·B |
+| `unity-agv` | `Assets/_Project/Scripts/AGV` (AGV1, 파레트 자리·예비 레일·최종 구역) | D |
+| `unity-ui` | `Assets/_Project/Scripts/UI` (상태 패널 A, 제어 패널 D) | A·D |
 | `unity-ros` | `Assets/_Project/Scripts/ROS`, `Assets/RosMessages` | D |
 | `scene` | `Assets/_Project/Scenes/Main.unity` | D |
 | `test` | 측정·검증 기록 | |

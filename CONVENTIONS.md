@@ -9,11 +9,14 @@
 |---|---|---|
 | ROS 패키지·노드·토픽·파라미터 | `snake_case` | `factory_manager`, `feed_stop_count` |
 | 번호 붙는 장비 | `<장비>_<번호>_<기능>` (SRS 4.4, NFR-08) | `arm_1_controller`, `/arm_1_pick_place`, `/agv_1_status` |
-| 공정 상태·zone 값 | 대문자 / 소문자 그대로 | `IDLE, RUNNING, PALLET_FULL, ERROR, E_STOP` / `reject, end_1, end_wait` |
+| 공정 상태·명령·보고 값 | 대문자 그대로 | 공정 `IDLE, RUNNING, ERROR, E_STOP` / 파레트 자리 `READY, OUT, REFILLING` / AGV 명령 `P1_DOCK, P2_DOCK, FINAL, HOME` |
+| 레인 값 | 소문자 `ok`, `ng` | `/diverter_1_cmd`의 `lane`, `/conveyor_1_end_ok` |
+| E_STOP 원인 값 | 소문자 (`/factory/stats`의 `estop`, SRS v3.1) | `button`, `heartbeat`, `timeout_weight`, `timeout_agv`, `startup` |
 | C# 클래스·파일 | `PascalCase` (파일명 = 클래스명) | `Conveyor.cs`, `KinematicGripper.cs` |
 | C# 필드·변수 | `camelCase`, Inspector 노출은 `[SerializeField] private` | `[SerializeField] private float speedMps = 0.2f;` |
 | 프리팹·씬 | `PascalCase` | `Arm_Fairino.prefab`, `Main.unity` |
-| 박스 ID | `BOX_001` (적재함을 채울 때 순서대로, 중복 불가) | |
+| 방석 ID | `C001` (C + 세 자리, 적재함을 채울 때 순서대로, 중복 불가) | `PickPlace.srv` 필드 이름은 `box_id` 유지, 값은 방석 id |
+| 장비 ID | `arm_1 ~ arm_3`, `conveyor` (고장·조치 토픽 값) | `/factory/fault_clear` → `arm_2` |
 
 **한글 금지**: 패키지, 노드, 토픽, 파일명, 폴더명, 브랜치명, 씬·프리팹 이름. 한글은 주석·문서·커밋 subject에만.
 
@@ -25,7 +28,9 @@
 | 토픽 이름 | SRS 4.4 표가 계약. 바꾸면 Unity `TopicNames.cs`와 같은 PR에서 |
 | 숫자 설정값 | 코드에 쓰지 않고 `dt_bringup/config/*.yaml` 파라미터로 (NFR-09). 이름에 단위 (`_sec`, `_m`, `_count`) |
 | 좌표 | ROS 좌표계(FLU), 단위 m·rad. 원본은 `line_coords.yaml` |
-| 판단 로직 | rclpy 없는 순수 Python 모듈로 분리해 단위 테스트 (`fsm.py`, `line_rules.py`) |
+| 판단 로직 | rclpy 없는 순수 Python 모듈로 분리해 단위 테스트 (`fsm.py`, `line_rules.py`, `grading.py`, `pallet_queue.py`) |
+| JSON 토픽 | 필드가 여러 개인 공장 토픽은 `std_msgs/String`에 JSON (SRS 4.4). 필드 이름은 SRS 표 그대로 (`id`, `kg`, `lane`, `wp`, `hitch`) |
+| 적재 수 | 파레트 적재 수와 운반 대기열은 **factory_manager만** 바꾼다. palletizer는 `/pallet_N_count`를 받아 쓰기만 한다 (SRS FR-12) |
 | 로그 | `self.get_logger().info/warn/error`. 상태 전이는 반드시 info로 남긴다 (SRS 6장 이벤트 로그) |
 
 ## 3. Unity [확정]
@@ -40,9 +45,9 @@
 | 좌표 변환 | `CoordConverter`에서만 (`To<FLU>()`, `From<FLU>()`) |
 | 메인 씬 | `Main.unity`는 **D만 수정**. 각자 `Scenes/Sandbox/<이름>_*.unity`에서 작업 |
 | 기능 단위 | 프리팹 안에서 완성 → D가 메인 씬에 배치. 프리팹을 고칠 때는 담당자에게 먼저 말한다 |
-| 설정값 | 적재함 수량, 규격 높이, 컨베이어 속도는 `LineSettings` ScriptableObject (Inspector) |
+| 설정값 | 적재함 수량·비율, 방석 무게 분포와 높이, 컨베이어 속도, 최종 구역 삭제 시간은 `LineSettings` ScriptableObject (Inspector, NFR-09) |
 | 집기 | 물리 그립 대신 Kinematic 부착 (SRS 2.5) |
-| 구매 에셋 | `Assets/ThirdParty/`에 두고 Git에 올리지 않는다 (SRS 2.4) |
+| 구매 에셋 | `Assets/ThirdParty/`에 두고 Git에 올리지 않는다 (SRS 2.4). **예외: `Assets/Conveyor System/`은 팀 씬과 수정본이 들어 있어 Git에 포함한다** (10.30 결정, Private 레포) |
 | 자동 생성 | `Assets/RosMessages/`는 직접 수정 금지, 재생성만 |
 
 ## 4. 같은 파일을 두 사람이 고치지 않기 [확정]
@@ -51,9 +56,10 @@
 |---|---|---|
 | `Main.unity` | D | 프리팹·스크립트로 만들어 D에게 요청 |
 | `factory_interfaces/*` | B | 단톡 합의 후 B가 수정, D가 Unity 메시지 재생성 |
-| `TopicNames.cs`, `CoordConverter.cs` | D | D에게 요청 |
-| `line_coords.yaml` | 공동 | 4명 합의 |
-| `Arm_Fairino.prefab` | A | A에게 요청 (팔 4대 공통) |
+| `TopicNames.cs`, `CoordConverter.cs`, `RosBridge.cs` | D | D에게 요청 |
+| `dt_bringup/config/factory.yaml` | B·C | factory_manager와 palletizer가 같이 읽으므로 두 사람 확인 |
+| `line_coords.yaml` | 공동 (정리 D) | 4명 합의 |
+| `Arm_Fairino.prefab` | D | D에게 요청 (팔 3대 공통). 팔별 배치·좌표는 각 팔 담당 |
 
 ## 5. 기록 [제안]
 
