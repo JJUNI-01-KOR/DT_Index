@@ -206,7 +206,7 @@ AGV1과 파레트 순환 (SRS 부록 A.6). 판단은 하지 않고 명령대로 
 |---|---|---|---|
 | `LineSettings.cs` | A | 예정 | ScriptableObject: 적재함 수량·비율, 방석 무게 분포와 높이, 컨베이어 속도, 최종 구역 삭제 시간, 로봇팔 동작 제한 시간 15초 (NFR-09, Inspector) |
 | `FactoryState.cs` | D | 예정 | `/factory/state` 문자열 ↔ enum (IDLE, RUNNING, ERROR, E_STOP) |
-| `BufferZoneSensor.cs`, `DropParcel.cs` | — | 삭제 | v2.2 대기 칸용. `LaneEnd.cs`로 대체 |
+| `BufferZoneSensor.cs` | — | 있음 | v2.2 대기 칸용이지만 `Main.unity`가 `BufferZoneSensor.prefab`을 쓰고 있어 남김. `LaneEnd.cs`가 생기면 씬에서 빼고 지운다 |
 
 ### 2.7 그 밖의 Unity 폴더
 
@@ -280,6 +280,7 @@ stats.py ──/factory/stats──▶ StatusPanel.cs
 | `ros2_ws/src/dt_arm/` | Unity IK 결정으로 ROS 팔 노드 불필요 |
 | `TopicNames.cs`의 `Pallet1Reset`, `Pallet2Reset`, `ConveyorBoxCount`, `Detect1Event`, `Detect2Event` | v3.1 토픽 표에 없음 |
 | `fsm.py`의 `PALLET_FULL`, `line_rules.py`의 `reject_wait`·`end_wait` 정지 규칙 | 파레트가 차도 라인은 계속 돈다 |
-| `Common/BufferZoneSensor.cs`, `DropParcel.cs`, `Prefabs/BufferZoneSensor.prefab` | 대기 칸 2개 삭제 |
+| `Common/DropParcel.cs` | 대기 칸 2개 삭제 (삭제함). `BufferZoneSensor`는 `Main.unity`가 쓰고 있어 LaneEnd 이후로 미룸 |
+| `Scenes/Sandbox/BoxTest.unity` | 지워진 BoxBin 프리팹을 참조하던 연습 씬 (삭제함) |
 | 팔4, 출고 팔레트(12칸), [팔레트 정리] 버튼 관련 코드 | 설비 삭제 |
 | 미머지 브랜치 `feature/bringup-launch-params`, `feature/bringup-line-coords`, `feature/palletizer-layout` | 머지하거나 v3.1 기준으로 다시 작업 (담당 김찬중 → palletizer는 박준영에게 이관) |
