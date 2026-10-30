@@ -1,11 +1,11 @@
-# 가짜 Unity 시나리오 (dt_fake_unity). 담당 D.
+# 가짜 Unity 시나리오 (dt_fake_unity). 담당 D. 기준: SRS v3.1
 # 실수 값은 2.0처럼 소수점을 붙인다 (정수로 쓰면 파라미터 형식 오류로 노드가 안 뜬다).
 fake_unity:
   ros__parameters:
-    box_sequence: "N,N,R,N,N,N,R,N"   # N=정상, R=규격 초과. 팔1이 꺼내는 순서대로 반복
-    line_travel_sec: 2.0              # 컨베이어 투입 → 칸 도착 (컨베이어가 가동 중일 때만 흐름)
-    agv_travel_sec: 8.0               # AGV1 편도
-    pick_place_sec: 1.0               # 로봇팔 한 번 동작
-    fail_arm_id: 0                    # 0이면 실패 없음, 1~4면 그 팔이 실패 응답
-    bin_capacity: 20                  # 적재함 박스 수 (비어 있을 때 꺼내면 다시 채움)
-    heartbeat_period_sec: 1.0         # /factory/heartbeat_unity 주기
+    cushion_sequence: "N,N,D,N,N,N,D,N"  # N=정상, D=불량. 팔1이 꺼내는 순서대로 반복
+    line_travel_sec: 2.0                 # 투입 → 갈림길 (컨베이어가 가동 중일 때만 흐름)
+    agv_travel_sec: 8.0                  # AGV1 웨이포인트 한 구간
+    pick_place_sec: 1.0                  # 로봇팔 한 번 동작
+    fail_arm_id: 0                       # 0이면 실패 없음, 1~3이면 그 팔이 실패 응답
+    bin_capacity: 20                     # 적재함 방석 수 (비어 있을 때 꺼내면 다시 채움)
+    heartbeat_period_sec: 1.0            # /factory/heartbeat_unity 주기
