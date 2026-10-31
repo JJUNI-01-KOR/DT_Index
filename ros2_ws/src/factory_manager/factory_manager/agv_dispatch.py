@@ -22,16 +22,34 @@ class AgvDispatcher:
         """출동 검사 (FR-13 2번). RUNNING, 운반 중 파레트 없음, 적재 없음, 맨 앞 파레트가 READY·가득이면
         PN_DOCK 명령을 돌려준다. 아니면 None.
         RUNNING이 될 때, 대기열·자리 상태·적재 여부가 바뀔 때, 1초마다 부른다."""
-        # TODO(FR-13)
-        raise NotImplementedError
+        if not running or self.carrying is not None or self.loaded is not False or front_pallet is None:
+            return None
+        self.carrying = front_pallet
+        self.last_cmd = dock(front_pallet)
+        return self.last_cmd
 
     def on_loaded(self, loaded, running, front_pallet):
         """/agv_1_loaded 수신. false → true면 FINAL, true → false면 운반 중 파레트를 비우고
         다음 PN_DOCK 또는 HOME. 보낼 명령이 없으면 None (FR-13 4·6번)."""
-        # TODO(FR-13)
-        raise NotImplementedError
+        before = self.loaded
+        self.loaded = loaded
+        if self.carrying is None:
+            return None
+        if before is False and loaded is True:
+            self.last_cmd = FINAL
+            return FINAL
+        if before is True and loaded is False:
+            self.carrying = None
+            next_cmd = self.try_dispatch(running, front_pallet)
+            if next_cmd is not None:
+                return next_cmd
+            self.last_cmd = HOME
+            return HOME
+        return None
 
     def reset(self):
         """E_STOP 해제 때 초기화 (FR-16 6번)."""
+        self.loaded = None 
         self.carrying = None
         self.last_cmd = None
+
