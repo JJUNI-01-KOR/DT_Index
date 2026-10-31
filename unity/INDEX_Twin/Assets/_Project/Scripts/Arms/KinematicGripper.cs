@@ -77,8 +77,11 @@ public class KinematicGripper : MonoBehaviour
     {
         var tp = rig.ToolPoint;
         held = box;
-        held.linearVelocity = Vector3.zero;
-        held.angularVelocity = Vector3.zero;
+        if (!held.isKinematic)   // 레인 끝 칸의 방석은 이미 Kinematic이라 속도를 건드리면 경고가 난다
+        {
+            held.linearVelocity = Vector3.zero;
+            held.angularVelocity = Vector3.zero;
+        }
         held.isKinematic = true;
 
         // 지금 붙은 그대로의 상대 위치를 기억 → 팔을 따라 같이 움직임
