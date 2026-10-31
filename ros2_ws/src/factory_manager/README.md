@@ -14,7 +14,7 @@
 |---|---|---|
 | `fsm.py` | 동작 | 4상태, E_STOP 시작과 원인, 해제, [시작]. ERROR·고장 목록은 TODO |
 | `grading.py` | 뼈대 | 무게 판정 (FR-07) |
-| `line_rules.py` | 뼈대 | 투입 조건: 레인 용량, 무게 보고 대기 (FR-02, 04) |
+| `line_rules.py` | 동작 | 투입 조건: 레인 용량, 무게 보고 대기 (FR-02, 04) |
 | `pallet_queue.py` | 동작 | 적재 수와 운반 대기열 (FR-12, 15) |
 | `agv_dispatch.py` | 동작 | AGV1 명령 P1_DOCK·P2_DOCK·FINAL·HOME (FR-13) |
 | `watchdog.py` | 뼈대 | 감시 시간 무게 보고 15초, AGV1 30초 (FR-02, 13) |
