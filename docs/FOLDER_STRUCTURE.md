@@ -151,7 +151,7 @@ ROS 통신은 **이 폴더에서만** 한다. 다른 스크립트는 여기 이�
 
 | 파일 | 상태 | 역할 | 관련 |
 |---|---|---|---|
-| `RosBridge.cs` | 수정 | `ROSConnection` 초기화, 토픽 Publisher/Subscriber 등록, 받은 메시지를 C# 이벤트로 뿌림, 연결 상태를 UI에 알림 | NFR-08 |
+| `RosBridge.cs` | 수정 | `ROSConnection` 초기화, 연결 상태. 제어 패널 발행(`/factory/start`, `/factory/emergency_stop`, `/factory/fault_clear`), `/factory/state` → `FactoryStateChanged`, `/factory/stats` → `StatsReceived`·`CurrentFault` (상태 패널은 이 이벤트를 구독) | NFR-08 |
 | `TopicNames.cs` | 수정 | 토픽 이름 상수. SRS 4.4 v3.1 표로 교체 (`detect_*`, `box_count`, `pallet_N_reset`, `arm_N_joint_states` 삭제, 새 토픽 추가) | NFR-08 |
 | `CoordConverter.cs` | 있음 | 좌표 변환 **유일한 곳**. `To<FLU>()`, `From<FLU>()` | SRS 4.4 |
 | `HeartbeatLink.cs` | 예정 | `/factory/heartbeat_unity` 1초 발행, `/factory/heartbeat_ros`가 3초 끊기면 장비 정지 + "ROS2 연결 끊김" | FR-17 |
@@ -159,6 +159,8 @@ ROS 통신은 **이 폴더에서만** 한다. 다른 스크립트는 여기 이�
 | `ConnectionTest.cs` | 수정 | 세팅 검증용. `/detect_1_event` 발행 부분 삭제 | |
 | `LaneEndLink.cs` | 있음 | 레인 끝(Line/LaneEnd.cs) 1번 칸에 방석이 들어올 때마다 `/conveyor_1_end_ok`·`_ng`로 id 1회. E_STOP → IDLE에서 레인 끝 방석 비움 | FR-09, 16 |
 | `ArmPickPlaceServer.cs` | 있음 | `/arm_N_pick_place` 서비스 서버 (팔마다 1개, `armId`로 서비스 이름 결정). 요청 좌표를 Unity로 바꿔 `Arms/ArmPickPlace.Run()` 호출, 결과를 응답. E_STOP이면 진행 중 요청에 `success=false, message=E_STOP`, E_STOP → IDLE이면 팔 초기화 | FR-02, 10, 11, 16, 18 |
+| `AgvLink.cs` | 있음 | `/agv_1_goal`(JSON: `{"wp"}` 또는 `{"wp","x","y","yaw"}`, `{"hitch"}`) → AgvWaypointDriver·AgvHitch, `/agv_1_status`(JSON `{"state","wp"}`) 바뀔 때. E_STOP이면 정지, 해제 시 끌던 파레트·최종 구역 파레트 삭제 + HOME | FR-13, 14, 16 |
+| `PalletSlotLink.cs` | 있음 | `/pallet_N_status` 바뀔 때 + 1초. E_STOP이면 보충 정지, 해제 시 빈 자리에 빈 파레트 바로 놓기 | FR-15, 16 |
 
 ### 2.2 `_Project/Scripts/Arms/` — [D] 공통 · scope `unity-arm`
 팔 3대가 같은 컴포넌트를 쓰고 **Unity IK로 움직인다** (10.30 확정, `/arm_N_joint_states`는 없음). 팔별 배치·좌표는 각 팔 담당: **팔1 A, 팔2 B, 팔3 D**.
@@ -189,17 +191,18 @@ AGV1과 파레트 순환 (SRS 부록 A.6). 판단은 하지 않고 명령대로 
 
 | 파일 | 상태 | 역할 | 관련 |
 |---|---|---|---|
-| `AgvWaypointDriver.cs` | 예정 | `/agv_1_goal`의 `wp`로 이동, 상태가 바뀔 때 `/agv_1_status`(MOVING, ARRIVED) | FR-13 |
-| `AgvHitch.cs` | 예정 | `{"hitch":"attach"}`·`"detach"`로 파레트 연결·분리, ATTACHED·DETACHED 보고. 끌 때 방석이 무너지지 않게 파레트에 고정 | FR-13 |
-| `PalletSlot.cs` | 예정 | 파레트 자리 1개(1·2). 파레트가 **완전히 벗어나면** OUT, 예비 파레트 이동 중 REFILLING, 도착하면 READY → `/pallet_N_status`(바뀔 때 + 1초) | FR-15 |
-| `SpareRail.cs` | 예정 | 예비 레일. 자리가 비면 빈 파레트를 자리로 옮기고 예비 자리에 새로 생성 | FR-15 |
-| `FinalZone.cs` | 예정 | 분리된 파레트와 방석을 3초(Inspector) 뒤 삭제. AGV 복귀를 기다리지 않음 | FR-14 |
+| `AgvWaypointDriver.cs` | 있음 | 웨이포인트 주행 (ROS 모름): 제자리 회전 → 직진 → 마지막 방향. goal에 좌표가 없으면 Inspector 정지 지점 표(HOME, P1_DOCK, P2_DOCK, FINAL)에서 찾음. 바퀴 회전은 차동 구동으로 표시(선택). ROS 연결은 `ROS/AgvLink.cs` | FR-13 |
+| `AgvHitch.cs` | 있음 | 가장 가까운 파레트 자리의 파레트를 연결·분리 (강체 견인). 파레트 위 방석은 파레트 자식 + Kinematic으로 고정. 최종 구역 안에서 분리하면 FinalZone에 넘김 | FR-13 |
+| `PalletSlot.cs` | 있음 | 파레트 자리 1개(1·2). 파레트가 **완전히 벗어나면** OUT, 예비 파레트 이동 중 REFILLING, 도착하면 READY. 발행은 `ROS/PalletSlotLink.cs` | FR-15 |
+| `SpareRail.cs` | 있음 | 예비 레일. 자리가 비면 빈 파레트를 자리로 옮기고(3초) 예비 자리에 새로 생성 | FR-15 |
+| `FinalZone.cs` | 있음 | 분리된 파레트와 방석을 3초(Inspector) 뒤 삭제. AGV 복귀를 기다리지 않음 | FR-14 |
 
 ### 2.5 `_Project/Scripts/UI/` — A·D · scope `unity-ui`
 
 | 파일 | 담당 | 상태 | 역할 | 관련 |
 |---|---|---|---|---|
-| `ControlPanel.cs` | D | 수정 | [시작], [비상정지](E_STOP이면 원인과 관계없이 "해제". factory_manager가 E_STOP으로 시작하므로 처음 화면은 "해제"), 고장 장비 3초 누르기 조치 → `/factory/fault_clear`(장비 id). 상태별 활성화. [팔레트 정리] 버튼 삭제 | UI-02, FR-01, 16, 18 |
+| `ControlPanel.cs` | D | 수정 | [Start](IDLE일 때만), [Emergency](E_STOP 아닐 때, `/factory/emergency_stop` true), [Clear](E_STOP일 때만, false = 해제). 10/31: 비상정지·해제를 버튼 2개로 나눔. factory_manager가 E_STOP으로 시작하므로 처음 화면은 [Clear]만 켜짐. 버튼 상태는 `/factory/state`로 정함, ROS2 끊기면 모두 꺼짐. [Fix](ERROR이고 고장 장비가 있을 때만): 3초 누르면 `/factory/fault_clear`(장비 id, `/factory/stats`의 fault). 누르는 동안 버튼에 장비와 남은 시간 표시 | UI-02, FR-01, 16, 18 |
+| `HoldButton.cs` | D | 있음 | 길게 누르기 (기본 3초). 중간에 떼거나 버튼이 꺼지면 처음부터. [Fix]에 붙음 | FR-18 |
 | `FaultSelector.cs` | D | ⚠ 예정 | [고장 주입] 대상(arm_1~3, conveyor). 유지 여부는 팀 결정(SRS FR-19 Could) | FR-19 |
 | `StatusPanel.cs` | A | 예정 | `/factory/state`, `/factory/stats`만 구독해 표시. 직접 세지 않음. 3초 못 받으면 회색. E_STOP이면 `estop` 원인 표시(비상정지, 통신 끊김, 무게 보고 시간 초과, AGV1 시간 초과, factory_manager 시작) | UI-03, FR-20 |
 | `StatusBanner.cs` | A | 예정 | 공정 상태 색, ERROR(고장 장비)·E_STOP·통신 끊김 경고 배너 | FR-16~18 |
