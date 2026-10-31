@@ -19,7 +19,7 @@ from geometry_msgs.msg import Pose
 from rclpy.node import Node
 from std_msgs.msg import Bool, Int32, String
 
-from .agv_dispatch import AgvDispatcher
+from .agv_dispatch import AgvDispatcher, FINAL, HOME
 from .fsm import E_STOP, Fsm, IDLE, RUNNING
 from .grading import Grader, diverter_cmd, parse_weight
 from .line_rules import FeedRule
@@ -147,6 +147,8 @@ class FactoryManager(Node):
         self.graded.clear()
         self.arm1_busy = False
         # TODO(FR-16): /pallet_N_count(0) 발행
+        for n in (1,2):
+            self.publish_count(n)
 
     def on_start(self, msg):
         if msg.data:
@@ -202,34 +204,79 @@ class FactoryManager(Node):
 
     def on_load(self, msg):
         """/conveyor_1_load {"main", "ok", "ng"} (FR-04)."""
-        # TODO(FR-04): JSON 읽고 feed_rule.on_load(load, now) 후 step()
+        # (FR-04): JSON 읽고 feed_rule.on_load(load, now) 후 step()
 
     def on_placed(self, pallet, msg):
         """/pallet_N_placed 방석 id (FR-12)."""
-        # TODO(FR-12): pallets.on_placed(pallet), /pallet_N_count 발행, 대기열에 들어갔으면 출동 검사
+        #(FR-12): pallets.on_placed(pallet), /pallet_N_count 발행, 대기열에 들어갔으면 출동 검사
+        if self.fsm.state ==E_STOP:
+            return
+        if self.pallets.is_full(pallet):
+            self.get_logger().warn(f'파레트{pallet}이 이미 가득 찼는데 적재 보고를 받아 무시: {msg.data}')
+            return
+        self.pallets.on_placed(pallet)
+        self.publish_count(pallet)
+        self.get_logger().info(f'파레트{pallet} 적재 {self.pallets.counts[pallet]}개 ({msg.data})')
+        self.step()
 
     def on_pallet_status(self, pallet, msg):
         """/pallet_N_status READY·OUT·REFILLING (FR-12, 15)."""
-        # TODO(FR-12, 15): pallets.on_status, READY로 바뀌어 0이 되면 /pallet_N_count(0), 출동 검사
+        #(FR-12, 15): pallets.on_status, READY로 바뀌어 0이 되면 /pallet_N_count(0), 출동 검사
+        if self.pallets.on_status(pallet, msg.data):
+            self.publish_count(pallet)
+            self.get_logger().info(f'파레트{pallet} 새 파레트 도착, 적재 수 0')
+        self.step()
 
     def on_agv_loaded(self, msg):
         """/agv_1_loaded 적재 여부 (FR-13)."""
-        # TODO(FR-13): agv.on_loaded → FINAL·다음 PN_DOCK·HOME 발행, watchdog.start_agv / stop_agv
+        # (FR-13): agv.on_loaded → FINAL·다음 PN_DOCK·HOME 발행, watchdog.start_agv / stop_agv
+        if self.fsm.state == E_STOP:
+            self.agv.loaded = msg.data
+            return
+        before = self.agv.loaded
+        run = self.fsm.state == RUNNING
+        cmd = self.agv.on_loaded(msg.data, run, self.pallets.front_ready())
+        if msg.data != before:
+            self.watchdog.stop_agv()
+        if cmd is not None:
+            self.send_agv(cmd)
+        self.step()
+
 
     # ── 발행·명령 ────────────────────────────────────────────
     def publish_state(self):
         self.state_pub.publish(String(data=self.fsm.state))
+
+    def publish_count(self, pallet):
+        """/pallet_N_count. 바뀔 때와 1초마다 (FR-12)."""
+        self.count_pubs[pallet].publish(Int32(data=self.pallets.counts[pallet]))
+
+    def now_sec(self):
+        return self.get_clock().now().nanoseconds / 1e9
+
+    def send_agv(self, cmd):
+        """/agv_1_cmd 발행 (FR-13). 도킹 명령이면 대기열에서 빼고, HOME이 아니면 감시 시간을 시작한다."""
+        if cmd not in (HOME, FINAL):
+            self.pallets.pop_front()
+        if cmd != HOME:
+            self.watchdog.start_agv(self.now_sec())
+        self.agv_cmd_pub.publish(String(data=cmd))
+        self.get_logger().info(f'AGV1 명령 {cmd}')
 
     def step(self):
         """장비 명령은 여기서만 정한다."""
         run = self.fsm.state == RUNNING
         self.set_conveyor(run)
         # TODO(FR-02, 04): run and feed_rule.can_feed(bin_count, arm1_busy, now)이면 self.feed()
-        # TODO(FR-13): run이면 agv.try_dispatch(run, pallets.front_ready())
+        cmd = self.agv.try_dispatch(run, pallets.front_ready())
+        if cmd is not None:
+            self.send_agv(cmd)
 
     def on_tick(self):
         """1초마다 상태를 다시 보내고 조건을 다시 본다."""
         self.publish_state()
+        for n in (1,2):
+            self.publish_count(n)
         # TODO(FR-17): /factory/heartbeat_ros 발행, Unity Heartbeat 끊김 검사
         # TODO(FR-02, 13): RUNNING이면 watchdog.expired(now) → fsm.to_estop(원인)
         # TODO(FR-20): /factory/stats 발행 (stats.to_json)
