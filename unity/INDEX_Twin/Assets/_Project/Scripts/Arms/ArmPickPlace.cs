@@ -320,7 +320,7 @@ public class ArmPickPlace : MonoBehaviour
     {
         var rb = g.GetComponent<Rigidbody>();
         if (rb == null) return false;
-        foreach (var k in FindObjectsByType<KinematicGripper>(FindObjectsSortMode.None))
+        foreach (var k in FindObjectsByType<KinematicGripper>())
             if (k.Held == rb) return true;
         return false;
     }

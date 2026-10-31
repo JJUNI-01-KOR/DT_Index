@@ -3,7 +3,10 @@
 // ROS 통신은 Scripts/ROS/ 에서만 한다 (CONVENTIONS 3절). 토픽 이름은 TopicNames 상수만 쓴다.
 //
 //   발행: /factory/start  (std_msgs/Bool)    [동작] 버튼 → true 1번
-//   구독: /factory/state  (std_msgs/String)  IDLE, RUNNING, PALLET_FULL, ERROR, E_STOP → FactoryStateChanged
+//         /factory/emergency_stop (std_msgs/Bool)  [Emergency] → true, [Clear] → false (해제)
+//         /factory/fault_clear (std_msgs/String)   [Fix] 3초 → 고장 장비 id
+//   구독: /factory/state  (std_msgs/String)  IDLE, RUNNING, ERROR, E_STOP → FactoryStateChanged
+//         /factory/stats  (std_msgs/String, JSON) → StatsReceived, CurrentFault (fault 값)
 //
 // 확인 (VM):
 //   ros2 launch dt_bringup connect.launch.py
@@ -29,6 +32,18 @@ public class RosBridge : MonoBehaviour
     /// <summary>Endpoint와 연결돼 있는지 (HUD 화살표 파란색과 같은 뜻)</summary>
     public bool Connected => ros != null && ros.HasConnectionThread && !ros.HasConnectionError;
 
+    /// <summary>/factory/stats JSON을 받을 때마다 (상태 패널은 이것만 구독한다, FR-20)</summary>
+    public event Action<string> StatsReceived;
+
+    /// <summary>마지막으로 받은 /factory/stats JSON. 아직 못 받았으면 빈 문자열</summary>
+    public string LastStatsJson { get; private set; } = "";
+
+    /// <summary>지금 고장 장비 (/factory/stats의 fault). 없으면 빈 문자열</summary>
+    public string CurrentFault { get; private set; } = "";
+
+    [Serializable]
+    private class StatsHead { public string fault; }
+
     private ROSConnection ros;
 
     void Awake()
@@ -47,14 +62,36 @@ public class RosBridge : MonoBehaviour
         if (Instance != this) return;
         ros = ROSConnection.GetOrCreateInstance();
         ros.RegisterPublisher<BoolMsg>(TopicNames.FactoryStart);
+        ros.RegisterPublisher<BoolMsg>(TopicNames.EmergencyStop);
+        ros.RegisterPublisher<StringMsg>(TopicNames.FaultClear);
         ros.Subscribe<StringMsg>(TopicNames.FactoryState, OnFactoryState);
+        ros.Subscribe<StringMsg>(TopicNames.FactoryStats, OnStats);
     }
 
     void OnDestroy()
     {
         if (Instance != this) return;
         Instance = null;
-        if (ros != null) ros.Unsubscribe(TopicNames.FactoryState);
+        if (ros != null)
+        {
+            ros.Unsubscribe(TopicNames.FactoryState);
+            ros.Unsubscribe(TopicNames.FactoryStats);
+        }
+    }
+
+    void OnStats(StringMsg msg)
+    {
+        LastStatsJson = msg.data;
+        try
+        {
+            var head = JsonUtility.FromJson<StatsHead>(msg.data);
+            CurrentFault = head != null && head.fault != null ? head.fault : "";
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning($"[RosBridge] {TopicNames.FactoryStats} JSON 해석 실패: {e.Message}", this);
+        }
+        StatsReceived?.Invoke(msg.data);
     }
 
     void OnFactoryState(StringMsg msg)
@@ -75,5 +112,29 @@ public class RosBridge : MonoBehaviour
         }
         ros.Publish(TopicNames.FactoryStart, new BoolMsg(true));
         Debug.Log($"[Unity→ROS] {TopicNames.FactoryStart} = true");
+    }
+
+    /// <summary>[Emergency] true(누름) · [Clear] false(해제): /factory/emergency_stop 1번 (FR-16)</summary>
+    public void PublishEmergencyStop(bool pressed)
+    {
+        if (ros == null)
+        {
+            Debug.LogWarning($"[RosBridge] ROS 연결 준비 전이라 {TopicNames.EmergencyStop}을 보내지 못함", this);
+            return;
+        }
+        ros.Publish(TopicNames.EmergencyStop, new BoolMsg(pressed));
+        Debug.Log($"[Unity→ROS] {TopicNames.EmergencyStop} = {(pressed ? "true (비상정지)" : "false (해제)")}");
+    }
+
+    /// <summary>[Fix] 3초 조치 완료: /factory/fault_clear (장비 id) 1번 (FR-18)</summary>
+    public void PublishFaultClear(string device)
+    {
+        if (ros == null || string.IsNullOrEmpty(device))
+        {
+            Debug.LogWarning($"[RosBridge] {TopicNames.FaultClear}을 보내지 못함 (연결 준비 전이거나 장비 id 없음)", this);
+            return;
+        }
+        ros.Publish(TopicNames.FaultClear, new StringMsg(device));
+        Debug.Log($"[Unity→ROS] {TopicNames.FaultClear} = {device}");
     }
 }
