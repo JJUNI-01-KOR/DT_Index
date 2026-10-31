@@ -268,7 +268,7 @@ class FactoryManager(Node):
         run = self.fsm.state == RUNNING
         self.set_conveyor(run)
         # TODO(FR-02, 04): run and feed_rule.can_feed(bin_count, arm1_busy, now)이면 self.feed()
-        cmd = self.agv.try_dispatch(run, pallets.front_ready())
+        cmd = self.agv.try_dispatch(run, self.pallets.front_ready())
         if cmd is not None:
             self.send_agv(cmd)
 
