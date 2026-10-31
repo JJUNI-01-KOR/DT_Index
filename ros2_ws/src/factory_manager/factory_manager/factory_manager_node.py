@@ -22,7 +22,7 @@ from std_msgs.msg import Bool, Int32, String
 from .agv_dispatch import AgvDispatcher, FINAL, HOME
 from .fsm import E_STOP, Fsm, IDLE, RUNNING
 from .grading import Grader, diverter_cmd, parse_weight
-from .line_rules import FeedRule
+from .line_rules import FeedRule, parse_load
 from .pallet_queue import PalletBook
 from .stats import Stats
 from .watchdog import Watchdog
@@ -146,7 +146,6 @@ class FactoryManager(Node):
         self.stats.reset()
         self.graded.clear()
         self.arm1_busy = False
-        # TODO(FR-16): /pallet_N_count(0) 발행
         for n in (1,2):
             self.publish_count(n)
 
@@ -181,7 +180,7 @@ class FactoryManager(Node):
 
     def on_weight(self, msg):
         """/scale_1_weight {"id", "kg"} (FR-06, 07, 08)."""
-        # TODO(FR-07): grading.parse_weight → grader.grade → stats 정상·불량 수 +1, 이벤트 로그
+        # (FR-07): grading.parse_weight → grader.grade → stats 정상·불량 수 +1, 이벤트 로그
         if self.fsm.state == E_STOP:
             return
         cushion, kg = parse_weight(msg.data)
@@ -199,12 +198,21 @@ class FactoryManager(Node):
         self.stats.on_graded(cushion, kg, lane)
         self.diverter_pub.publish(String(data=diverter_cmd(cushion, lane)))   # 판정 직후 바로 (NFR-01)
         self.get_logger().info(f'판정 {cushion} {kg} kg → {lane}')
-        # TODO(FR-08): 바로 /diverter_1_cmd {"id", "lane"} 방석당 1회 (NFR-01: 0.5초 이내)
+        # (FR-08): 바로 /diverter_1_cmd {"id", "lane"} 방석당 1회 (NFR-01: 0.5초 이내)
+        if self.feed_rule.on_weight(cushion):
+            self.watchdog.stop_weight()
+        self.step()
+
         # TODO(FR-02): feed_rule.on_weight, watchdog.stop_weight
 
     def on_load(self, msg):
         """/conveyor_1_load {"main", "ok", "ng"} (FR-04)."""
-        # (FR-04): JSON 읽고 feed_rule.on_load(load, now) 후 step()
+        load = parse_load(msg.data)
+        if load is None:  # 이전 값은 load_timeout_sec이 지나면 쓰지 않는다
+            self.get_logger().warn(f'/conveyor_1_load를 읽을 수 없어 무시: {msg.data}')
+            return
+        self.feed_rule.on_load(load, self.now_sec())
+        self.step()
 
     def on_placed(self, pallet, msg):
         """/pallet_N_placed 방석 id (FR-12)."""
@@ -267,7 +275,8 @@ class FactoryManager(Node):
         """장비 명령은 여기서만 정한다."""
         run = self.fsm.state == RUNNING
         self.set_conveyor(run)
-        # TODO(FR-02, 04): run and feed_rule.can_feed(bin_count, arm1_busy, now)이면 self.feed()
+        if run and self.feed_rule.can_feed(self.bin_count, self.arm1_busy, self.now_sec()):
+            self.feed()
         cmd = self.agv.try_dispatch(run, self.pallets.front_ready())
         if cmd is not None:
             self.send_agv(cmd)
@@ -302,13 +311,18 @@ class FactoryManager(Node):
         res = future.result()
         if res.success:
             self.get_logger().info(f'로봇팔1 투입 완료 {res.message}')
-            # TODO(FR-02): stats.fed +1, feed_rule.on_fed(res.message), watchdog.start_weight(now)
+            self.stats.fed += 1
+            if res.message not in self.graded: # 무게 보고가 응답보다 먼저 왔으면 기다리지 않음 
+                self.feed_rule.on_fed(res.message)
+                self.watchdog.start_weight(self.now_sec())
         elif res.message == 'E_STOP':
             self.get_logger().info('로봇팔1 E_STOP으로 중단 (고장 아님)')
         else:
             self.get_logger().warn(f'로봇팔1 투입 실패 {res.message}')
+            self.arm1_busy = True #다시 시도 하지 않음 
             # TODO(FR-18): fsm.on_fault('arm_1'), 요청을 기억했다가 조치 후 한 번 재전송
         # TODO(FR-18): pick_timeout_sec 안에 응답이 없으면 실패로 처리
+        self.step()
 
     def set_conveyor(self, on):
         """컨베이어 가동(True)·정지(False). 바뀔 때만 보낸다."""
