@@ -41,6 +41,9 @@ public class Diverter : MonoBehaviour
 
     public bool Active { get => active; set => active = value; }
 
+    /// <summary>지금 분기 칸 위에 있는 물건. ConveyorLoad가 메인 라인 수로 센다 (분기 게이트 위 = 메인)</summary>
+    public IEnumerable<Rigidbody> Inside => inside;
+
     void Reset() => GetComponent<BoxCollider>().isTrigger = true;
 
     void OnTriggerEnter(Collider other)

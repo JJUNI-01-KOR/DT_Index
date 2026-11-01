@@ -26,7 +26,7 @@ palletizer_node:
   ros__parameters:
     lane: ok                    # ok → 팔2·파레트1, ng → 팔3·파레트2
     pallet_capacity: 5          # 적재 기준. factory_manager와 같은 값 (FR-10, 11)
-    cushion_height_m: 0.3       # 방석 높이. k단 놓기 = 파레트 상면 + (k-1) × 이 값 (Cushion 프리팹 0.3 m 정육면체 기준)
+    cushion_height_m: 0.1       # 방석 높이. k단 놓기 = 파레트 상면 + (k-1) × 이 값 (Cushion 프리팹 0.4×0.4×0.1 m, 11/01 확정)
     pick_timeout_sec: 20.0      # 팔2·3 집기 응답 제한. Unity 팔 서버의 동작 제한 15초(Inspector)보다 길게 (FR-18)
 
 agv_1_controller:

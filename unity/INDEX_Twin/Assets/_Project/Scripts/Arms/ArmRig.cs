@@ -9,6 +9,14 @@ using UnityEngine;
 ///   · 6개 관절이 "동시에 출발해서 동시에 도착" (동기화)
 ///   · 천천히 출발 → 가속 → 감속 → 천천히 정지 (S자 속도 곡선)
 /// 10/30 제어 방식 결정(ROS2 관절값 / Unity IK)과 상관없이 둘 다 이 컴포넌트를 쓴다.
+///
+/// 11/01 A: Play 시작 때 팔이 일자로 선 자세(관절 0)에서 홈 자세로 확 꺾이며 흔들리던 문제
+///   - 시작할 때 홈 자세까지 S자 곡선으로 천천히 이동한다 (startMoveSec). 예전엔 목표를 한 번에 바꿔서 휘청였다
+///     startMoveSec = 0이면 홈 자세로 순간이동
+///   - 관절 모터에 목표 "속도"도 같이 준다 (S자 곡선의 미분). 예전엔 목표 속도 0이라 damping이 움직임을 붙잡고,
+///     damping을 낮추면 끝에서 출렁였다. 이제 damping을 높여도(minDamping) 따라가는 데 지장이 없어 출렁임이 없다
+///   - gravityCompensation(기본 켬): 팔 링크에 중력을 끈다. 실제 로봇 제어기가 중력을 보상하는 것과 같다.
+///     처짐·출렁임이 없어서 S자 이동이 그대로 보인다
 /// </summary>
 [DisallowMultipleComponent]
 public class ArmRig : MonoBehaviour
@@ -31,6 +39,14 @@ public class ArmRig : MonoBehaviour
     [SerializeField] private float stiffness = 10000f;
     [SerializeField] private float damping = 100f;
     [SerializeField] private float forceLimit = 1000f;
+    [Tooltip("damping 최소값. 목표 속도를 같이 주므로 높아도 느려지지 않고 끝에서 출렁임만 줄어든다")]
+    [SerializeField] private float minDamping = 1500f;
+
+    [Tooltip("Play 시작 때 홈 자세까지 걸리는 시간(초). 0이면 순간이동")]
+    [SerializeField] private float startMoveSec = 2.5f;
+
+    [Tooltip("팔 링크에 중력을 끈다 (실제 로봇 제어기의 중력 보상). 끄면 예전처럼 중력 영향 받음")]
+    [SerializeField] private bool gravityCompensation = true;
 
     [Header("부드러운 이동")]
     [Tooltip("가장 많이 도는 관절의 평균 속도 (도/초). 이 값으로 이동 시간이 정해진다")]
@@ -72,12 +88,46 @@ public class ArmRig : MonoBehaviour
         // 베이스가 바닥으로 떨어지지 않게 루트 고정
         var root = GetComponentInChildren<ArticulationBody>();
         if (root != null && root.isRoot) root.immovable = true;
+
+        if (gravityCompensation)
+            foreach (var ab in GetComponentsInChildren<ArticulationBody>()) ab.useGravity = false;
     }
 
     void Start()
     {
         if (goHomeOnStart && homeRad != null && homeRad.Length == joints.Length)
-            SetJointTargetsImmediate(homeRad);
+        {
+            if (startMoveSec <= 0f) TeleportTo(homeRad);
+            else
+            {
+                SetJointTargets(homeRad);                                // 지금 자세에서 S자로 출발
+                moveDuration = Mathf.Max(moveDuration, startMoveSec);     // 처음엔 여유 있게 천천히
+            }
+        }
+    }
+
+    /// <summary>관절을 그 자세로 바로 옮긴다 (드라이브로 끌지 않아서 흔들림 없음). Play 시작용</summary>
+    public void TeleportTo(float[] radians)
+    {
+        if (!CheckLength(radians)) return;
+        EnsureBuffers();
+        for (int i = 0; i < joints.Length; i++)
+        {
+            float deg = radians[i] * Mathf.Rad2Deg;
+            goalDeg[i] = startDeg[i] = deg;
+            WriteDriveTarget(i, deg);
+            joints[i].jointPosition = new ArticulationReducedSpace(radians[i]);
+            joints[i].jointVelocity = new ArticulationReducedSpace(0f);
+        }
+        moveElapsed = moveDuration = 0f;
+        IsMoving = false;
+    }
+
+    /// <summary>홈 자세를 바꾼다 (ArmPickPlace의 자동 홈). 이동은 GoHome()</summary>
+    public void SetHomeRad(float[] radians)
+    {
+        if (!CheckLength(radians)) return;
+        homeRad = (float[])radians.Clone();
     }
 
     /// <summary>홈 자세로 부드럽게 이동</summary>
@@ -104,7 +154,7 @@ public class ArmRig : MonoBehaviour
             if (j == null) continue;
             var d = j.xDrive;
             d.stiffness = stiffness;
-            d.damping = damping;
+            d.damping = Mathf.Max(damping, minDamping);
             d.forceLimit = forceLimit;
             j.xDrive = d;
         }
@@ -158,11 +208,12 @@ public class ArmRig : MonoBehaviour
         moveElapsed += Time.fixedDeltaTime;
         float t = moveDuration > 0f ? Mathf.Clamp01(moveElapsed / moveDuration) : 1f;
         float s = SmootherStep(t);
+        float dsdt = (moveDuration > 0f && t < 1f) ? SmootherStepDeriv(t) / moveDuration : 0f;
 
         bool allReached = t >= 1f;
         for (int i = 0; i < joints.Length; i++)
         {
-            WriteDriveTarget(i, Mathf.Lerp(startDeg[i], goalDeg[i], s));
+            WriteDriveTarget(i, Mathf.Lerp(startDeg[i], goalDeg[i], s), (goalDeg[i] - startDeg[i]) * dsdt);
 
             // 물리 첫 스텝 전에는 jointPosition이 비어 있을 수 있음
             if (joints[i].jointPosition.dofCount == 0) { allReached = false; continue; }
@@ -180,6 +231,9 @@ public class ArmRig : MonoBehaviour
     /// </summary>
     static float SmootherStep(float t) => t * t * t * (t * (t * 6f - 15f) + 10f);
 
+    /// <summary>SmootherStep의 미분 30t^4 - 60t^3 + 30t^2 (목표 속도용)</summary>
+    static float SmootherStepDeriv(float t) => 30f * t * t * (t * (t - 2f) + 1f);
+
     /// <summary>
     /// 이동 계산용 배열을 관절 수에 맞게 준비 (현재 드라이브 목표값으로 채움).
     /// Awake 전에 불리거나, 에디터 재컴파일로 배열이 비어 있어도 안전하게.
@@ -193,10 +247,11 @@ public class ArmRig : MonoBehaviour
         IsMoving = false;
     }
 
-    void WriteDriveTarget(int i, float deg)
+    void WriteDriveTarget(int i, float deg, float velDegPerSec = 0f)
     {
         var d = joints[i].xDrive;
         d.target = deg;
+        d.targetVelocity = velDegPerSec;
         joints[i].xDrive = d;
     }
 
