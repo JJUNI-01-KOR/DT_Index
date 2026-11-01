@@ -54,6 +54,12 @@ public class Conveyor : MonoBehaviour
     [Tooltip("옮길 물건의 태그 (예: Box, Cushion)")]
     [SerializeField] private string itemTag = "Box";
 
+    [Header("칸 경계 처리 (코너 끼임 방지)")]
+    [Tooltip("방석 중심이 칸 바닥 위(+이 여유 m)에 있을 때만 그 칸이 민다. 구간끼리 같은 방석을 동시에 밀지 않게")]
+    [SerializeField] private float ownMargin = 0.05f;
+    [Tooltip("수평 속도를 흐름 방향으로만 (옆으로 남은 속도를 없앰). 중력(y)은 유지")]
+    [SerializeField] private bool alignToFlow = true;
+
     [Header("벨트 텍스처 스크롤 (선택, 보여주기용)")]
     [SerializeField] private Renderer beltRenderer;
     [SerializeField] private float textureScrollPerMeter = 1f;
@@ -79,6 +85,9 @@ public class Conveyor : MonoBehaviour
     public bool IsRunning { get; private set; }
     public int BoxCount { get; private set; } = -1;
     public float SpeedMps => speedMps;
+
+    /// <summary>지금 이 구간 칸 위에 있는 방석 (팔이 든 것 제외). ConveyorLoad가 /conveyor_1_load 셀 때 쓴다</summary>
+    public IEnumerable<Rigidbody> BodiesOnBelt => onBelt.Keys;
 
     public event Action<bool> RunningChanged;
     public event Action<int> BoxCountChanged;
@@ -223,8 +232,11 @@ public class Conveyor : MonoBehaviour
             float v = IsRunning ? speedMps : 0f;
 
             Vector3 cur = body.linearVelocity;
-            // 흐름 방향 성분만 바꾼다. 옆(푸셔)·위아래(중력)는 그대로
-            body.linearVelocity = cur - dir * Vector3.Dot(cur, dir) + dir * v;
+            // alignToFlow: 수평은 흐름 방향만, 중력(y)은 유지 (코너에서 벽 쪽 속도가 남지 않게)
+            // 끄면 예전처럼 흐름 방향 성분만 바꾸고 옆·위아래는 그대로
+            body.linearVelocity = alignToFlow
+                ? new Vector3(0f, cur.y, 0f) + dir * v
+                : cur - dir * Vector3.Dot(cur, dir) + dir * v;
             if (stopTumbling) body.angularVelocity = Vector3.zero;
             if (IsRunning) body.WakeUp();
         }
@@ -274,6 +286,10 @@ public class Conveyor : MonoBehaviour
                 var body = hits[i].attachedRigidbody;
                 if (body == null || body.isKinematic) continue;                   // 팔이 들고 있는 박스 제외
                 if (onlyBoxTag && !hits[i].CompareTag(itemTag) && !body.CompareTag(itemTag)) continue;
+
+                // 중심 소속 규칙: 조금만 걸친 방석은 이 칸이 밀지 않는다 (다른 구간과 서로 미는 문제 방지)
+                Vector3 local = Quaternion.Inverse(rot) * (body.position - center);
+                if (Mathf.Abs(local.x) > half.x + ownMargin || Mathf.Abs(local.z) > half.z + ownMargin) continue;
 
                 // 칸 경계에 걸친 박스는 중심이 더 가까운 칸 하나에만 속하게
                 float d = new Vector3(body.position.x - center.x, 0f, body.position.z - center.z).sqrMagnitude;
