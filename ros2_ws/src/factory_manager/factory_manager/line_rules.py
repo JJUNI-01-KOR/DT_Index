@@ -25,7 +25,7 @@ class FeedRule:
           main + ok와 main + ng가 모두 레인 용량 미만, /conveyor_1_load를 load_timeout_sec 안에 받음.
     """
 
-    def __init__(self, lane_capacity=3, load_timeout_sec=3.0):
+    def __init__(self, lane_capacity=15, load_timeout_sec=3.0):
         self.lane_capacity = lane_capacity
         self.load_timeout_sec = load_timeout_sec
         self.load = None          # 마지막 /conveyor_1_load {"main", "ok", "ng"}

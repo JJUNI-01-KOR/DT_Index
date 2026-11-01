@@ -2,7 +2,7 @@
 
 factory_manager가 기록한 값과 받은 값을 그대로 담는다. 상태 패널은 표시만 하고 따로 세지 않는다.
 """
-
+import json
 
 class Stats:
 
@@ -24,8 +24,31 @@ class Stats:
         """부록 A.4 형식의 JSON 문자열.
         키: state, fault, estop, bin_left, fed, ok, ng, last, main, lane_ok, lane_ng,
             pallet_1, pallet_2, queue, agv{cmd, loaded, pallet}, agv_cycle_sec"""
-        # TODO(FR-20)
-        raise NotImplementedError
+        #(FR-20)
+        main, lane_ok, lane_ng = (load['main'], load['ok'], load['ng']) if load else (0, 0, 0)
+        data = {
+            'state': fsm.state,
+            'fault': fsm.fault(),
+            'estop': fsm.estop,
+            'bin_left': bin_left,
+            'fed': self.fed,
+            'ok': self.ok,
+            'ng': self.ng,
+            'last': self.last,
+            'main': main,
+            'lane_ok': lane_ok,
+            'lane_ng': lane_ng,
+            'pallet_1': pallets.counts[1],
+            'pallet_2': pallets.counts[2],
+            'queue': pallets.queue,
+            'agv': {
+                'cmd': agv.last_cmd,
+                'loaded': agv.loaded,
+                'pallet': agv.carrying,
+            },
+            'agv_cycle_sec': agv_cycle_sec,
+        }
+        return json.dumps(data)
 
     def reset(self):
         """E_STOP 해제 때 투입 수, 정상 수, 불량 수를 0으로 (SRS 6장)."""

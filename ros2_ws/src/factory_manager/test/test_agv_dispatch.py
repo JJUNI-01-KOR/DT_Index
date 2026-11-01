@@ -106,6 +106,58 @@ def test_error_finishes_unloading_then_redispatch():
     assert a.try_dispatch(True, 2) == 'P2_DOCK'      # RUNNING으로 돌아옴
 
 
+def test_dock_sent_at_set_on_dispatch():
+    a = idle_agv()
+    a.try_dispatch(True, 1, now=100)
+    assert a.dock_sent_at == 100
+
+
+def test_cycle_sec_recorded_on_detach():
+    """PN_DOCK을 보낸 시각부터 분리될 때까지의 시간."""
+    a = idle_agv()
+    a.try_dispatch(True, 1, now=100)
+    a.on_loaded(True, True, None, now=120)             # FINAL
+    a.on_loaded(False, True, None, now=150)            # 분리
+    assert a.last_cycle_sec == 50
+    assert a.dock_sent_at is None
+
+
+def test_next_dock_sent_at_after_chained_dispatch():
+    """분리되며 바로 다음 PN_DOCK이 나갈 때, 그 시각이 다음 사이클의 시작 시각이 된다."""
+    book = PalletBook(capacity=1)
+    book.on_status(1, 'READY')
+    book.on_status(2, 'READY')
+    book.on_placed(2)
+    book.on_placed(1)
+    a = idle_agv()
+    a.try_dispatch(True, book.front_ready(), now=0)
+    book.pop_front()
+    a.on_loaded(True, True, book.front_ready(), now=30)         # FINAL
+    cmd = a.on_loaded(False, True, book.front_ready(), now=50)  # 분리, 바로 다음 P1_DOCK
+    book.pop_front()
+    assert cmd == 'P1_DOCK'
+    assert a.last_cycle_sec == 50
+    assert a.dock_sent_at == 50
+
+
+def test_reset_clears_cycle_fields():
+    a = idle_agv()
+    a.try_dispatch(True, 1, now=100)
+    a.on_loaded(True, True, None, now=120)
+    a.on_loaded(False, True, None, now=150)
+    a.reset()
+    assert (a.dock_sent_at, a.last_cycle_sec) == (None, None)
+
+
+def test_cycle_sec_none_without_now():
+    """now를 안 넘겨도(기존 호출 방식) 에러 없이 그대로 None."""
+    a = idle_agv()
+    a.try_dispatch(True, 1)
+    a.on_loaded(True, True, None)
+    a.on_loaded(False, True, None)
+    assert a.last_cycle_sec is None
+
+
 def test_pallet2_then_pallet1_order():
     """파레트2, 파레트1 순서로 차면 P2_DOCK → FINAL → P1_DOCK → FINAL → HOME (TC-17)."""
     book = PalletBook(capacity=1)

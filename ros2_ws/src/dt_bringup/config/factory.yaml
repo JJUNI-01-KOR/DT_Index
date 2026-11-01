@@ -14,7 +14,7 @@ factory_manager:
     heartbeat_timeout_sec: 3.0        # Unity Heartbeat가 이 시간 끊기면 E_STOP(heartbeat) (FR-17)
     normal_weight_min_kg: 0.90        # 정상 판정 하한, 포함 (FR-07, 제안값)
     normal_weight_max_kg: 1.10        # 정상 판정 상한, 포함 (FR-07, 제안값)
-    lane_capacity_count: 3            # main+ok 또는 main+ng가 이 수 이상이면 투입 중지 (FR-04)
+    lane_capacity_count: 15           # main+ok 또는 main+ng가 이 수 이상이면 투입 중지 (FR-04)
     load_timeout_sec: 3.0             # /conveyor_1_load를 이 시간 못 받으면 투입 요청 안 함 (FR-04)
     pallet_capacity: 5                # 적재 기준 1×5. palletizer와 같은 값 (FR-12)
     pick_timeout_sec: 20.0            # 팔1 집기 응답 제한. 응답이 아예 안 오면 실패 (FR-18)
