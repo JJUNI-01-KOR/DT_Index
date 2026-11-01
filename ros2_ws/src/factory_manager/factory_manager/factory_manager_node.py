@@ -133,6 +133,7 @@ class FactoryManager(Node):
         if fn(*args):
             self.get_logger().info(f'{before} → {self.fsm.state} ({event})')
             self.publish_state()
+            self.publish_stats()
             if before == E_STOP and self.fsm.state == IDLE:
                 self.reset_line()
         self.step()
@@ -254,6 +255,11 @@ class FactoryManager(Node):
     # ── 발행·명령 ────────────────────────────────────────────
     def publish_state(self):
         self.state_pub.publish(String(data=self.fsm.state))
+    
+    def publish_stats(self):
+        self.stats_pub.publish(String(data=self.stats.to_json(
+            self.fsm, self.bin_count, self.feed_rule.load, self.pallets, 
+            self.agv, self.agv.last_cycle_sec)))
 
     def publish_count(self, pallet):
         """/pallet_N_count. 바뀔 때와 1초마다 (FR-12)."""
@@ -288,7 +294,7 @@ class FactoryManager(Node):
             self.publish_count(n)
         # TODO(FR-17): /factory/heartbeat_ros 발행, Unity Heartbeat 끊김 검사
         # TODO(FR-02, 13): RUNNING이면 watchdog.expired(now) → fsm.to_estop(원인)
-        # TODO(FR-20): /factory/stats 발행 (stats.to_json)
+        self.publish_stats()
         self.step()
 
     def feed(self):
