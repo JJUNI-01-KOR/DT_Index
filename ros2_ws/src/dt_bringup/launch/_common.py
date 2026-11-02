@@ -21,9 +21,11 @@ def control_nodes():
         Node(package='factory_manager', executable='factory_manager_node',
              name='factory_manager', parameters=[factory_yaml],
              output='screen', emulate_tty=True),
-        Node(package='dt_palletizer', executable='palletizer_node',
-             name='palletizer_node', parameters=[factory_yaml],
-             output='screen', emulate_tty=True),
+        # 같은 코드를 lane만 바꿔 두 개 (factory.yaml의 palletizer_1·palletizer_2 섹션)
+        # palletizer_1: 정상 레인 → 팔2 → 파레트1, palletizer_2: 불량 레인 → 팔3 → 파레트2
+        *[Node(package='dt_palletizer', executable='palletizer_node',
+               name=f'palletizer_{n}', parameters=[factory_yaml],
+               output='screen', emulate_tty=True) for n in (1, 2)],
         Node(package='dt_agv', executable='agv_1_controller_node',
              name='agv_1_controller', parameters=[factory_yaml],
              output='screen', emulate_tty=True),

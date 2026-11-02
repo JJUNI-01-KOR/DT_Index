@@ -22,13 +22,22 @@ factory_manager:
     weight_report_timeout_sec: 15.0   # 팔1 투입 성공 뒤 이 시간 안에 무게 보고가 없으면 E_STOP(timeout_weight) (FR-02, 제안값)
     agv_timeout_sec: 30.0             # PN_DOCK·FINAL 뒤 이 시간 안에 /agv_1_loaded가 안 바뀌면 E_STOP(timeout_agv) (FR-13, 제안값)
 
-# v3.1에서는 palletizer_1(ok)·palletizer_2(ng) 두 노드로 띄운다 (C). 노드 이름을 바꿀 때 이 키도 바꾼다.
-palletizer_node:
+# palletizer_1(정상 레인)·palletizer_2(불량 레인)는 같은 코드를 lane만 바꿔 띄운다 (launch/_common.py, 11/03 D).
+# 섹션 이름 = 노드 이름. 다르면 설정을 못 읽고 기본값으로 돈다. 두 섹션의 나머지 값은 같게 둔다.
+# 집는 자리(pick_ok·pick_ng)와 파레트 자리(pallet_1·pallet_2)는 line_coords.yaml에서 읽는다.
+palletizer_1:
   ros__parameters:
-    lane: ok                    # ok → 팔2·파레트1, ng → 팔3·파레트2
+    lane: ok                    # ok → /conveyor_1_end_ok, 팔2, 파레트1
     pallet_capacity: 5          # 적재 기준. factory_manager와 같은 값 (FR-10, 11)
     cushion_height_m: 0.1       # 방석 높이. k단 놓기 = 파레트 상면 + (k-1) × 이 값 (Cushion 프리팹 0.4×0.4×0.1 m, 11/01 확정)
     pick_timeout_sec: 20.0      # 팔2·3 집기 응답 제한. Unity 팔 서버의 동작 제한 15초(Inspector)보다 길게 (FR-18)
+
+palletizer_2:
+  ros__parameters:
+    lane: ng                    # ng → /conveyor_1_end_ng, 팔3, 파레트2
+    pallet_capacity: 5
+    cushion_height_m: 0.1
+    pick_timeout_sec: 20.0
 
 # agv_1_controller는 waypoints_file을 여기서 주지 않는다. 비워 두면 노드가 dt_bringup에 설치된
 # config/agv_waypoints.yaml 전체 경로를 스스로 찾는다. 파일 이름만 적으면(상대 경로) 실행 위치 기준이라 못 찾고 죽는다 (11/03 D).
