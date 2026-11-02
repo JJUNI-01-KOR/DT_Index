@@ -15,7 +15,7 @@ def rule_with_load(main=0, ok=0, ng=0):
 # ── parse_load: /conveyor_1_load 글자 → {"main", "ok", "ng"} ──
 
 def test_parse_load_normal():
-    assert parse_load('{"main": 1, "ok": 2, "ng": 0}') == {'main': 1, 'ok': 2, 'ng': 0}
+    assert parse_load('{"main": 1, "ok": 2, "ng": 0}') == {'main': 1, 'ok': 2, 'ng': 0, 'ok_end': 0, 'ng_end': 0}
 
 
 @pytest.mark.parametrize('text', [
@@ -107,3 +107,43 @@ def test_reset_clears():
     r.on_fed('C001')
     r.reset()
     assert (r.load, r.load_time, r.waiting_id) == (None, None, None)
+
+
+# ── 11/02 A: 레인 끝 칸이 다 차면 팔1 투입만 멈춤 ──
+
+def test_parse_load_with_lane_end():
+    assert parse_load('{"main": 0, "ok": 2, "ng": 1, "ok_end": 2, "ng_end": 1}') == \
+        {'main': 0, 'ok': 2, 'ng': 1, 'ok_end': 2, 'ng_end': 1}
+
+
+def test_parse_load_lane_end_default_zero():
+    """예전 Unity(ok_end·ng_end 없음)와 호환."""
+    assert parse_load('{"main": 1, "ok": 2, "ng": 0}') == {'main': 1, 'ok': 2, 'ng': 0, 'ok_end': 0, 'ng_end': 0}
+
+
+@pytest.mark.parametrize('text', [
+    '{"main": 0, "ok": 0, "ng": 0, "ok_end": -1}',
+    '{"main": 0, "ok": 0, "ng": 0, "ng_end": "2"}',
+    '{"main": 0, "ok": 0, "ng": 0, "ok_end": true}',
+])
+def test_parse_load_bad_lane_end(text):
+    assert parse_load(text) is None
+
+
+@pytest.mark.parametrize('ok_end, ng_end, expected', [
+    (0, 0, True),
+    (1, 1, True),
+    (2, 0, False),   # 정상 레인 끝 가득
+    (0, 2, False),   # 불량 레인 끝 가득
+])
+def test_no_feed_when_lane_end_full(ok_end, ng_end, expected):
+    r = FeedRule(lane_capacity=15, load_timeout_sec=3.0, lane_end_slots=2)
+    r.on_load({'main': 0, 'ok': ok_end, 'ng': ng_end, 'ok_end': ok_end, 'ng_end': ng_end}, 0.0)
+    assert r.can_feed(5, False, 1.0) is expected
+    assert r.lane_end_full() is (not expected)
+
+
+def test_lane_end_rule_off():
+    r = FeedRule(lane_capacity=15, load_timeout_sec=3.0, lane_end_slots=0)
+    r.on_load({'main': 0, 'ok': 2, 'ng': 2, 'ok_end': 2, 'ng_end': 2}, 0.0)
+    assert r.can_feed(5, False, 1.0) is True
