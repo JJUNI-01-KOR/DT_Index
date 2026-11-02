@@ -141,6 +141,8 @@ class FactoryManager(Node):
             self.get_logger().info(f'{before} → {self.fsm.state} ({event})')
             self.publish_state()
             self.publish_stats()
+            if before != RUNNING and self.fsm.state == RUNNING:
+                self.watchdog.restart(self.now_sec())            
             if before == E_STOP and self.fsm.state == IDLE:
                 self.reset_line()
         self.step()
@@ -337,9 +339,12 @@ class FactoryManager(Node):
         self.publish_state()
         for n in (1,2):
             self.publish_count(n)
-        # TODO(FR-02, 13): RUNNING이면 watchdog.expired(now) → fsm.to_estop(원인)
         self.publish_stats()
         self.check_arm1_timeout()
+        if self.fsm.state == RUNNING:
+            cause = self.watchdog.expired(self.now_sec())
+            if cause is not None:
+                self.apply('감시 시간 초과', self.fsm.to_estop, cause)
         self.step()
 
     def feed(self):
