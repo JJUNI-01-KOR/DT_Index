@@ -20,7 +20,7 @@ from rclpy.node import Node
 from std_msgs.msg import Bool, Int32, String
 
 from .agv_dispatch import AgvDispatcher, FINAL, HOME
-from .fsm import E_STOP, Fsm, IDLE, RUNNING
+from .fsm import CAUSE_HEARTBEAT, E_STOP, Fsm, IDLE, RUNNING
 from .grading import Grader, diverter_cmd, parse_weight
 from .line_rules import FeedRule, parse_load
 from .pallet_queue import PalletBook
@@ -80,6 +80,7 @@ class FactoryManager(Node):
         self.conveyor_on = None  # 마지막으로 보낸 컨베이어 명령. None = 아직 안 보냄
         self.bin_count = 0       # 적재함 남은 방석 수 (/bin/count)
         self.graded = set()# 이미 판정한 방석
+        self.unity_heard_at = None # Unity Heartbeat를 마지막으로 받은 시각. None = 아직 못 받음
 
         # ── 발행 (SRS v3.1 4.4) ──
         self.state_pub = self.create_publisher(String, '/factory/state', 10)
@@ -122,6 +123,7 @@ class FactoryManager(Node):
             self.get_logger().warn('라인 좌표표에 feed_point가 없어 원점을 투입 위치로 씀')
 
         self.create_timer(period, self.on_tick)
+        self.create_timer(self.heartbeat_period_sec, self.on_heartbeat_tick)
         self.get_logger().info(f'factory_manager 시작: {self.fsm.state} (원인 {self.fsm.estop}), [해제]를 기다림')
         self.publish_state()
         self.step()  # 켜지면 컨베이어 정지부터 보낸다
@@ -171,7 +173,8 @@ class FactoryManager(Node):
 
     def on_heartbeat_unity(self, msg):
         """Unity Heartbeat 수신 (FR-17)."""
-        # TODO(FR-17): 받은 시각 기록. on_tick에서 heartbeat_timeout_sec 넘으면 fsm.to_estop(CAUSE_HEARTBEAT)
+        # 받은 시각 기록. on_tick에서 heartbeat_timeout_sec 넘으면 fsm.to_estop(CAUSE_HEARTBEAT)
+        self.unity_heard_at = self.now_sec()
 
     # ── 장비 보고 ────────────────────────────────────────────
     def on_bin_count(self, msg):
@@ -203,8 +206,6 @@ class FactoryManager(Node):
         if self.feed_rule.on_weight(cushion):
             self.watchdog.stop_weight()
         self.step()
-
-        # TODO(FR-02): feed_rule.on_weight, watchdog.stop_weight
 
     def on_load(self, msg):
         """/conveyor_1_load {"main", "ok", "ng"} (FR-04)."""
@@ -286,13 +287,20 @@ class FactoryManager(Node):
         cmd = self.agv.try_dispatch(run, self.pallets.front_ready())
         if cmd is not None:
             self.send_agv(cmd)
+    
+    def on_heartbeat_tick(self):
+        """heartbeat를 보내고 unity 끊김을 검사한다 """
+        self.heartbeat_pub.publish(Bool(data=True))
+        if self.unity_heard_at is None: # 아직 못 받음
+            return
+        if self.now_sec() - self.unity_heard_at > self.heartbeat_timeout_sec:
+            self.apply('Unity Heartbeat 끊김', self.fsm.to_estop, CAUSE_HEARTBEAT)
 
     def on_tick(self):
         """1초마다 상태를 다시 보내고 조건을 다시 본다."""
         self.publish_state()
         for n in (1,2):
             self.publish_count(n)
-        # TODO(FR-17): /factory/heartbeat_ros 발행, Unity Heartbeat 끊김 검사
         # TODO(FR-02, 13): RUNNING이면 watchdog.expired(now) → fsm.to_estop(원인)
         self.publish_stats()
         self.step()
