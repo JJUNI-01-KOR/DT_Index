@@ -14,6 +14,10 @@ using UnityEngine;
 /// 준비: 빈 오브젝트 + BoxCollider(Is Trigger) + 이 스크립트. Joiner 칸 위를 덮게.
 /// 선택하면 하늘색(들어오는 방향), 초록(정상), 빨강(불량) 화살표가 보인다.
 /// 물건 중심이 칸 중앙에 올 때까지는 직진하고, 그 다음 좌/우로 꺾는다.
+///
+/// 11/02 A: 판정은 ROS(factory_manager → DiverterLink)가 결과표(ItemSort)에 적는다 (SRS FR-08).
+///          방향은 방석이 칸 중앙을 지나는 순간 한 번 정하고 고정한다 (늦게 온 명령으로 꺾이는 도중 방향이 바뀌지 않게).
+///          그때까지 명령이 없으면 Unchecked Goes Reject에 따라 불량 레인 + 경고 로그 (FR-08 예외 처리).
 /// </summary>
 [DefaultExecutionOrder(100)]   // Conveyor(기본 0)보다 나중에 실행
 [RequireComponent(typeof(BoxCollider))]
@@ -38,6 +42,7 @@ public class Diverter : MonoBehaviour
     [SerializeField] private bool active = true;
 
     private readonly HashSet<Rigidbody> inside = new HashSet<Rigidbody>();
+    private readonly Dictionary<Rigidbody, bool> locked = new Dictionary<Rigidbody, bool>();   // 칸 중앙에서 정한 방향 (true = 불량)
 
     public bool Active { get => active; set => active = value; }
 
@@ -49,23 +54,47 @@ public class Diverter : MonoBehaviour
     void OnTriggerEnter(Collider other)
     {
         var rb = other.attachedRigidbody;
-        if (rb == null || !inside.Add(rb)) return;
+        if (rb == null) return;
+        inside.Add(rb);
+    }
+
+    /// <summary>칸 중앙에서 방향을 한 번 정한다</summary>
+    bool Decide(Rigidbody rb)
+    {
         var sort = rb.GetComponent<ItemSort>();
-        string why = (sort != null && sort.Inspected) ? sort.Reason : "검사 안 받음";
-        bool isReject = (sort != null && sort.Inspected) ? sort.Reject : uncheckedGoesReject;
-        Debug.Log($"[diverter] {rb.name}: {why} → {(isReject ? "불량 방향(빨강)" : "정상 방향(초록)")}", this);
+        bool isReject;
+        if (sort != null && sort.Inspected)
+        {
+            isReject = sort.Reject;
+            Debug.Log($"[diverter] {rb.name}: {sort.Reason} → {(isReject ? "불량 레인" : "정상 레인")}", this);
+        }
+        else
+        {
+            isReject = uncheckedGoesReject;
+            Debug.LogWarning($"[diverter] {rb.name}: 분기 명령 없이 갈림길 도착 → {(isReject ? "불량 레인" : "정상 레인")} (FR-08)", this);
+        }
+        locked[rb] = isReject;
+        return isReject;
     }
 
     void OnTriggerExit(Collider other)
     {
         var rb = other.attachedRigidbody;
-        if (rb != null) inside.Remove(rb);
+        if (rb == null) return;
+        inside.Remove(rb);
+        locked.Remove(rb);
     }
 
     void FixedUpdate()
     {
         if (!active) return;
         inside.RemoveWhere(rb => rb == null);
+        if (locked.Count > 0)
+        {
+            var gone = new List<Rigidbody>();
+            foreach (var k in locked.Keys) if (k == null) gone.Add(k);
+            foreach (var k in gone) locked.Remove(k);
+        }
 
         Vector3 pass = transform.TransformDirection(passDirection).normalized;
         Vector3 reject = transform.TransformDirection(rejectDirection).normalized;
@@ -76,17 +105,20 @@ public class Diverter : MonoBehaviour
         foreach (var rb in inside)
         {
             if (rb.isKinematic) continue;
-            var sort = rb.GetComponent<ItemSort>();
-            bool isReject = (sort != null && sort.Inspected) ? sort.Reject : uncheckedGoesReject;
-            Vector3 dir = isReject ? reject : pass;
+            Vector3 dir;
 
             // 칸 중앙에 오기 전에는 계속 직진 (가장자리만 걸쳤을 때 미리 꺾여서 레일에 끼는 것 방지)
             Vector3 fromCenter = rb.position - zoneCenter; fromCenter.y = 0f;
-            if (Vector3.Dot(fromCenter, inDir) < 0f)
+            if (!locked.TryGetValue(rb, out bool isReject) && Vector3.Dot(fromCenter, inDir) < 0f)
             {
                 // 직진하면서 옆으로 어긋난 건 칸 중앙 줄로 살짝 맞춘다
                 Vector3 side = fromCenter - inDir * Vector3.Dot(fromCenter, inDir);
                 dir = (inDir - side * 2f).normalized;
+            }
+            else
+            {
+                if (!locked.ContainsKey(rb)) isReject = Decide(rb);   // 중앙을 지나는 순간 한 번
+                dir = isReject ? reject : pass;
             }
 
             // 수평 속도는 전부 분기 방향으로 교체, 수직(중력)은 유지
