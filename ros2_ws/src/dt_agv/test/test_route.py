@@ -23,10 +23,10 @@ def test_dock_goes_through_via_point_then_stop():
     r = new_route()
     goal, warn = r.start('P1_DOCK')
     assert warn is None
-    assert goal == {'x': -0.75, 'y': 19.0, 'yaw': 0.0}       # 경로점 먼저
-    assert r.on_arrived() == STOPS['P1_DOCK']                # 그다음 정지 지점
-    assert r.on_arrived() == {'hitch': 'attach'}             # 도킹이니 자동 attach
-    assert r.on_arrived() is None                            # 더 할 거 없음
+    assert goal == {'wp': 'P1_DOCK_via', 'x': -0.75, 'y': 19.0, 'yaw': 0.0}   # 경로점 먼저
+    assert r.on_arrived() == {'wp': 'P1_DOCK', **STOPS['P1_DOCK']}            # 그다음 정지 지점
+    assert r.on_arrived() == {'hitch': 'attach'}                             # 도킹이니 자동 attach
+    assert r.on_arrived() is None                                           # 더 할 거 없음
 
 
 def test_final_has_no_via_point():
@@ -35,7 +35,7 @@ def test_final_has_no_via_point():
     r.loaded = True
     goal, warn = r.start(FINAL)
     assert warn is None
-    assert goal == STOPS['FINAL']
+    assert goal == {'wp': 'FINAL', **STOPS['FINAL']}
     assert r.on_arrived() == {'hitch': 'detach'}
 
 
@@ -101,3 +101,12 @@ def test_estop_cleared_resets_everything():
 
 def test_docks_tuple_has_both_pallets():
     assert DOCKS == ('P1_DOCK', 'P2_DOCK')
+
+
+def test_every_goal_has_nonempty_wp():
+    """Unity AgvLink는 좌표를 줘도 wp 이름이 없으면 goal을 무시한다 (AgvLink.cs:102)."""
+    r = new_route()
+    goal, _ = r.start('P1_DOCK')
+    assert goal.get('wp')
+    nxt = r.on_arrived()
+    assert nxt.get('wp')
