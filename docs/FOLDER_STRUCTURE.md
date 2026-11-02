@@ -135,7 +135,7 @@ Unity 없이 ROS2 쪽만 시험하기 위한 노드 (WBS 2.4, 3.13). v3.1에서 
 | `launch/_common.py` | 수정 | factory·fake launch가 함께 쓰는 제어 노드 목록 (palletizer 2개 추가) |
 | `launch/factory.launch.py` | 수정 | 시연용: Endpoint(10000) + factory_manager + palletizer_1·_2 + agv_1_controller. 팔 노드는 없다(Unity IK). **명령 1줄로 시작** (NFR-10) |
 | `launch/fake.launch.py` | 수정 | Endpoint 대신 fake_unity_node |
-| `config/factory.yaml` | 수정 | factory_manager와 palletizer가 **같은 파일**을 읽음: 정상 무게 범위, 레인 용량(3), 적재 기준(5), 집기 응답 제한(20초), Heartbeat(1초·3초) |
+| `config/factory.yaml` | 수정 | factory_manager와 palletizer가 **같은 파일**을 읽음: 정상 무게 범위, 레인 용량(15), 적재 기준(5), 집기 응답 제한(20초), Heartbeat(1초·3초) |
 | `config/line_coords.yaml` | 수정 | 라인 좌표표 (ROS 좌표, m·rad): 적재함 칸, 투입 위치, 무게 센서, 분기 게이트, 집는 자리 2곳, 팔 베이스 3개, 파레트 자리 2곳, 예비 파레트 자리 2곳, 최종 구역. **바꾸려면 4명 합의** |
 | `config/agv_waypoints.yaml` | 수정 | AGV1 일방통행 루프 (대기 → 도킹 → 최종 구역 → 바깥 레인 → 대기) |
 | `config/fake_scenario.yaml` | 수정 | 1.6 참고 |
