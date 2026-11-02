@@ -2,7 +2,8 @@
 // ROS 통신은 Scripts/ROS/ 에서만 한다 (CONVENTIONS 3절).
 //
 //   구독: /conveyor/cmd       (std_msgs/Bool)   true=가동, false=정지. 메인 라인과 두 레인 함께
-//   발행: /conveyor_1_load    (std_msgs/String) JSON {"main":1,"ok":2,"ng":0}. 바뀔 때 + 1초마다 (FR-04)
+//   발행: /conveyor_1_load    (std_msgs/String) JSON {"main":1,"ok":2,"ng":0,"ok_end":1,"ng_end":0}. 바뀔 때 + 1초마다 (FR-04)
+//         ok_end·ng_end: 레인 끝 칸 2개 중 찬 칸 수 (11/02 A, 둘 중 하나라도 2면 factory_manager가 컨베이어와 팔1 투입을 멈춤)
 //         값은 Line/ConveyorLoad.cs가 센다. 같은 오브젝트에 없으면 자동으로 붙인다.
 //
 // 11/01 A: v2.2의 /conveyor/box_count(Int32) 발행을 /conveyor_1_load로 바꿈.
@@ -81,7 +82,7 @@ public class ConveyorLink : MonoBehaviour
     void OnLoadChanged(int main, int ok, int ng)
     {
         Publish();
-        Debug.Log($"[Unity→ROS] {TopicNames.Conveyor1Load} 방석 수: 메인 {main}개, 정상 레인 {ok}개, 불량 레인 {ng}개", this);
+        Debug.Log($"[Unity→ROS] {TopicNames.Conveyor1Load} 방석 수: 메인 {main}개, 정상 레인 {ok}개 (끝 칸 {load.OkEnd}/2), 불량 레인 {ng}개 (끝 칸 {load.NgEnd}/2)", this);
     }
 
     void Publish()
@@ -91,7 +92,7 @@ public class ConveyorLink : MonoBehaviour
         // ROS PC와 연결이 안 됐으면 보내지 않는다 (1초마다 다시 시도하니까 연결되면 바로 나감)
         if (!ros.HasConnectionThread || ros.HasConnectionError) return;
 
-        var msg = new StringMsg($"{{\"main\":{load.Main},\"ok\":{load.Ok},\"ng\":{load.Ng}}}");
+        var msg = new StringMsg($"{{\"main\":{load.Main},\"ok\":{load.Ok},\"ng\":{load.Ng},\"ok_end\":{load.OkEnd},\"ng_end\":{load.NgEnd}}}");
         try
         {
             ros.Publish(TopicNames.Conveyor1Load, msg);
