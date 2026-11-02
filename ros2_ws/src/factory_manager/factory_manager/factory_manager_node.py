@@ -20,7 +20,7 @@ from rclpy.node import Node
 from std_msgs.msg import Bool, Int32, String
 
 from .agv_dispatch import AgvDispatcher, FINAL, HOME
-from .fsm import CAUSE_HEARTBEAT, E_STOP, Fsm, IDLE, RUNNING
+from .fsm import CAUSE_HEARTBEAT, E_STOP, Fsm, IDLE, RUNNING, parse_fault
 from .grading import Grader, diverter_cmd, parse_weight
 from .line_rules import FeedRule, parse_load
 from .pallet_queue import PalletBook
@@ -115,6 +115,9 @@ class FactoryManager(Node):
         self.arm1 = self.create_client(PickPlace, '/arm_1_pick_place')
         self.arm1_busy = False  # 요청을 보내고 응답을 기다리는 중
         self.arm1_wait_logged = False  # '서비스 없음' 로그를 한 번만 찍기 위해
+        self.arm1_future = None #응답을 기다리는 요청 , 지난 요청의 늦은 응답은 무시 
+        self.arm1_sent_at = None # 요청 시각 (pick_timeout_sec 검사)
+        self.pick_failed = set() # 조치 후 다시 요청할 팔 
         # 라인 좌표표 (D 관리, ROS 좌표)
         self.declare_parameter('line_coords_file', default_line_coords())
         coords = self.get_parameter('line_coords_file').value
@@ -149,6 +152,9 @@ class FactoryManager(Node):
         self.stats.reset()
         self.graded.clear()
         self.arm1_busy = False
+        self.arm1_future = None
+        self.arm1_sent_at = None
+        self.pick_failed.clear()
         for n in (1,2):
             self.publish_count(n)
 
@@ -161,7 +167,15 @@ class FactoryManager(Node):
 
     def on_fault_clear(self, msg):
         """3초 조치 완료 (FR-18). 장비 id: arm_1 ~ arm_3, conveyor."""
-        # TODO(FR-18): fsm.on_fault_clear, RUNNING이 되면 집기 실패한 팔만 재전송 (arm_1은 직접, arm_2·3은 /factory/retry)
+        before = self.fsm.state
+        self.apply(f'조치 완료 {msg.data}', self.fsm.on_fault_clear, msg.data)
+        if before != 'ERROR' or self.fsm.state != RUNNING:
+            return
+        for device in sorted(self.pick_failed):
+            if device != 'arm_1':  # arm_1은 위 apply 안의 step()이 다시 요청한다
+                self.retry_pub.publish(String(data=device))
+        self.pick_failed.clear()
+        
 
     def on_inject_fault(self, msg):
         """[고장 주입] (FR-19, Could)."""
@@ -169,7 +183,18 @@ class FactoryManager(Node):
 
     def on_fault(self, msg):
         """palletizer의 집기 실패 보고 {"device": "arm_2", "reason": "pick_failed"} (FR-18)."""
-        # TODO(FR-18): JSON 읽고 fsm.on_fault(device)
+        device = parse_fault(msg.data)
+        if device is None:
+            self.get_logger().warn(f'/factory/fault를 읽을 수 없어 무시: {msg.data}')
+            return
+        self.report_pick_failure(device)
+    
+    def report_pick_failure(self, device):
+        """집기 실패를 고장 목록에 넣음 ,RUNNING, ERROR 에서 받음 """
+        if self.fsm.state not in (RUNNING, 'ERROR'):
+            return
+        self.pick_failed.add(device)
+        self.apply(f'집기 실패 {device}', self.fsm.on_fault, device)
 
     def on_heartbeat_unity(self, msg):
         """Unity Heartbeat 수신 (FR-17)."""
@@ -303,6 +328,7 @@ class FactoryManager(Node):
             self.publish_count(n)
         # TODO(FR-02, 13): RUNNING이면 watchdog.expired(now) → fsm.to_estop(원인)
         self.publish_stats()
+        self.check_arm1_timeout()
         self.step()
 
     def feed(self):
@@ -316,27 +342,43 @@ class FactoryManager(Node):
         req = PickPlace.Request()  # box_id는 비워 보낸다. Unity가 집은 방석 id를 message로 돌려준다
         req.place_pose = self.poses.get('feed_point', Pose())
         self.arm1_busy = True
+        self.arm1_sent_at = self.now_sec()
         self.get_logger().info('로봇팔1 투입 요청')
-        self.arm1.call_async(req).add_done_callback(self.on_arm1_done)
+        self.arm1_future = self.arm1.call_async(req)
+        self.arm1_future.add_done_callback(self.on_arm1_done)
 
     def on_arm1_done(self, future):
         """로봇팔1 응답. 다음 투입은 무게 보고와 방석 수를 보고 다시 판단한다."""
+        if future is not self.arm1_future:  # 시간 초과나 해제로 이미 끝낸 요청
+            return
+        self.arm1_future = None
+        self.arm1_sent_at = None
         self.arm1_busy = False
         res = future.result()
         if res.success:
             self.get_logger().info(f'로봇팔1 투입 완료 {res.message}')
             self.stats.fed += 1
-            if res.message not in self.graded: # 무게 보고가 응답보다 먼저 왔으면 기다리지 않음 
+            if res.message not in self.graded:
                 self.feed_rule.on_fed(res.message)
                 self.watchdog.start_weight(self.now_sec())
         elif res.message == 'E_STOP':
             self.get_logger().info('로봇팔1 E_STOP으로 중단 (고장 아님)')
         else:
             self.get_logger().warn(f'로봇팔1 투입 실패 {res.message}')
-            self.arm1_busy = True #다시 시도 하지 않음 
-            # TODO(FR-18): fsm.on_fault('arm_1'), 요청을 기억했다가 조치 후 한 번 재전송
-        # TODO(FR-18): pick_timeout_sec 안에 응답이 없으면 실패로 처리
+            self.report_pick_failure('arm_1')
         self.step()
+    
+    def check_arm1_timeout(self):
+        """pick_timeout_sec 안에 응답이 없으면 실패로 처리한다 (FR-18)."""
+        if self.arm1_sent_at is None or self.fsm.state == E_STOP:
+            return
+        if self.now_sec() - self.arm1_sent_at <= self.pick_timeout_sec:
+            return
+        self.get_logger().warn(f'로봇팔1 응답 없음 {self.pick_timeout_sec}초')
+        self.arm1_future = None
+        self.arm1_sent_at = None
+        self.arm1_busy = False
+        self.report_pick_failure('arm_1')
 
     def set_conveyor(self, on):
         """컨베이어 가동(True)·정지(False). 바뀔 때만 보낸다."""

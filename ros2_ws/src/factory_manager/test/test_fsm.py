@@ -1,5 +1,5 @@
 from factory_manager.fsm import (
-    CAUSE_BUTTON, CAUSE_HEARTBEAT, CAUSE_STARTUP, CAUSE_TIMEOUT_WEIGHT, E_STOP, Fsm, IDLE, RUNNING)
+    CAUSE_BUTTON, CAUSE_HEARTBEAT, CAUSE_STARTUP, CAUSE_TIMEOUT_WEIGHT, ERROR, E_STOP, Fsm, IDLE, RUNNING, parse_fault)
 
 
 def released():
@@ -60,3 +60,38 @@ def test_release_clears_faults():
     f.on_estop(True)
     f.on_estop(False)
     assert f.faults == [] and f.fault() is None
+
+
+def running_fsm():
+    f = Fsm()
+    f.on_estop(False)
+    f.on_start()
+    return f
+
+
+def test_fault_goes_error():
+    f = running_fsm()
+    assert f.on_fault('arm_2') is True
+    assert f.state == ERROR and f.fault() == 'arm_2'
+
+
+def test_other_device_clear_ignored():  # TC-26
+    f = running_fsm()
+    f.on_fault('arm_2')
+    assert f.on_fault_clear('arm_3') is False
+    assert f.state == ERROR
+
+
+def test_second_fault_keeps_error_until_all_cleared():
+    f = running_fsm()
+    f.on_fault('arm_2')
+    f.on_fault('arm_3')
+    f.on_fault_clear('arm_2')
+    assert f.state == ERROR and f.fault() == 'arm_3'
+    assert f.on_fault_clear('arm_3') is True
+    assert f.state == RUNNING
+
+
+def test_parse_fault():
+    assert parse_fault('{"device":"arm_2","reason":"pick_failed"}') == 'arm_2'
+    assert parse_fault('이상한 값') is None

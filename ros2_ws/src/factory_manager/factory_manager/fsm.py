@@ -3,6 +3,7 @@
 메서드는 상태가 바뀌면 True를 돌려준다. 장비 명령은 노드가 정한다.
 지금은 시작(E_STOP), 해제, [시작], 비상정지·통신 끊김·감시 시간 E_STOP까지. ERROR와 고장 목록은 TODO.
 """
+import json
 
 IDLE, RUNNING, ERROR, E_STOP = 'IDLE', 'RUNNING', 'ERROR', 'E_STOP'
 
@@ -56,10 +57,28 @@ class Fsm:
 
     def on_fault(self, device):
         """집기 실패·고장 주입 (FR-18, 19). RUNNING → ERROR, ERROR 중이면 고장 목록 뒤에 추가."""
-        # TODO(FR-18): RUNNING이면 faults=[device]로 ERROR, ERROR면 목록에 없을 때만 뒤에 추가
+        if self.state ==RUNNING:
+            self.faults = [device]
+            return self._go(ERROR)
+        if self.state == ERROR and device not in self.faults:
+            self.faults.append(device)
         return False
 
     def on_fault_clear(self, device):
         """3초 조치 완료 (FR-18). 목록 맨 앞 장비일 때만 빼고, 목록이 비면 RUNNING."""
-        # TODO(FR-18): device != fault()면 무시. 비면 RUNNING으로 (재전송은 노드가 정함)
-        return False
+        if self.state != ERROR or device != self.fault():
+            return False
+        self.faults.pop(0)
+        return self._go(RUNNING) if not self.faults else False
+    
+def parse_fault(text):
+    """/factory/fault JSON → 장비 id. 읽을 수 없으면 None."""
+    try:
+        data = json.loads(text)
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    device = data.get('device')
+    return device if device in ('arm_2', 'arm_3') else None
+
