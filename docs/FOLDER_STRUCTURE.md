@@ -111,8 +111,8 @@ DT_Index/
 
 | 파일 | 상태 | 역할 | 관련 |
 |---|---|---|---|
-| `dt_agv/agv_1_controller_node.py` | 수정 | `/agv_1_cmd`(P1_DOCK, P2_DOCK, FINAL, HOME)를 받아 일방통행 경로의 웨이포인트를 `/agv_1_goal`(JSON)로 순서대로 보내고, `/agv_1_status`(MOVING, ARRIVED, ATTACHED, DETACHED)를 보고 도킹 위치에서 연결, 최종 구역에서 분리. 연결 여부를 `/agv_1_loaded`(Bool, 바뀔 때 + 1초)로 보고. 적재 여부와 맞지 않는 명령은 무시 + 경고. `/factory/state`가 E_STOP → IDLE로 바뀌면 경로를 버리고 현재 위치를 HOME으로 둔 뒤 `/agv_1_loaded(false)` | FR-13, 16, A.6 |
-| `dt_agv/cycle_timer.py` | ⚠ 예정 | AGV 사이클 시간 기록. SRS는 factory_manager가 PN_DOCK 시각부터 잰다고 되어 있어 여기서 할지 결정 필요 | SRS 6장 |
+| `dt_agv/agv_1_controller_node.py` | 동작 | `/agv_1_cmd`(P1_DOCK, P2_DOCK, FINAL, HOME)를 받아 일방통행 경로의 웨이포인트를 `/agv_1_goal`(JSON)로 순서대로 보내고, `/agv_1_status`(MOVING, ARRIVED, ATTACHED, DETACHED)를 보고 도킹 위치에서 연결, 최종 구역에서 분리. 연결 여부를 `/agv_1_loaded`(Bool, 바뀔 때 + 1초)로 보고. 적재 여부와 맞지 않는 명령은 무시 + 경고. `/factory/state`가 E_STOP → IDLE로 바뀌면 경로를 버리고 현재 위치를 HOME으로 둔 뒤 `/agv_1_loaded(false)`. 판단은 `route.py`(rclpy 없음) | FR-13, 16, A.6 |
+| `dt_agv/cycle_timer.py` | 안 만듦 | AGV 사이클 시간 기록은 SRS대로 factory_manager(`agv_dispatch.py`)가 PN_DOCK 시각부터 잼 (3.7 ⑥에서 완료) | SRS 6장 |
 | 웨이포인트 | 수정 | `dt_bringup/config/agv_waypoints.yaml` (HOME, P1_DOCK, P2_DOCK, FINAL과 경로점) | |
 
 ### 1.6 `dt_fake_unity/` — [C] · scope `fake`
