@@ -15,6 +15,10 @@
 //   ng   : Conveyor "left",  "Line 2" + LaneEnd(Lane Label "ng")
 //
 // 값이 바뀌면 Changed(main, ok, ng). 1초마다 다시 보내는 건 ConveyorLink가 한다.
+//
+// 11/02 A: 레인 끝 칸(1번 집는 자리 + 2번 대기) 중 찬 칸 수 OkEnd·NgEnd (0~2)도 센다.
+//   /conveyor_1_load에 ok_end·ng_end로 같이 보내고, factory_manager는 어느 한쪽이라도 칸이 다 차면
+//   컨베이어를 멈추고(/conveyor/cmd false, 상태는 RUNNING 유지) 팔1 투입도 멈춘다. 칸이 비면 다시 돈다.
 
 using System;
 using System.Collections.Generic;
@@ -48,6 +52,10 @@ public class ConveyorLoad : MonoBehaviour
     public int Main { get; private set; }
     public int Ok { get; private set; }
     public int Ng { get; private set; }
+    /// <summary>정상 레인 끝 칸(집는 자리·대기) 중 방석이 있는 칸 수 (0~2)</summary>
+    public int OkEnd { get; private set; }
+    /// <summary>불량 레인 끝 칸 중 방석이 있는 칸 수 (0~2)</summary>
+    public int NgEnd { get; private set; }
 
     /// <summary>(main, ok, ng)가 바뀔 때</summary>
     public event Action<int, int, int> Changed;
@@ -88,10 +96,11 @@ public class ConveyorLoad : MonoBehaviour
         ngSet.ExceptWith(mainSet);
 
         int m = mainSet.Count, o = okSet.Count, n = ngSet.Count;
-        if (first || m != Main || o != Ok || n != Ng)
+        int oe = SlotsFilled(okLaneEnd), ne = SlotsFilled(ngLaneEnd);
+        if (first || m != Main || o != Ok || n != Ng || oe != OkEnd || ne != NgEnd)
         {
             first = false;
-            Main = m; Ok = o; Ng = n;
+            Main = m; Ok = o; Ng = n; OkEnd = oe; NgEnd = ne;
             Changed?.Invoke(m, o, n);
         }
     }
@@ -121,6 +130,22 @@ public class ConveyorLoad : MonoBehaviour
             var rb = probe[i].attachedRigidbody;
             if (rb != null && !rb.isKinematic && Countable(rb)) set.Add(rb);
         }
+    }
+
+    int SlotsFilled(LaneEnd end)
+    {
+        if (end == null) return 0;
+        int c = 0;
+        if (InSlot(end.AtPick)) c++;
+        if (InSlot(end.AtWait)) c++;
+        return c;
+    }
+
+    bool InSlot(GameObject g)
+    {
+        if (g == null) return false;
+        var rb = g.GetComponent<Rigidbody>();
+        return rb == null || !IsHeld(rb);   // 팔이 들고 있으면 빈 칸으로 본다
     }
 
     void AddGo(GameObject g, HashSet<Rigidbody> set)
@@ -174,5 +199,5 @@ public class ConveyorLoad : MonoBehaviour
     }
 
     [ContextMenu("지금 값 출력")]
-    void PrintNow() => Debug.Log($"[방석 수] 메인 {Main}개, 정상 레인 {Ok}개, 불량 레인 {Ng}개", this);
+    void PrintNow() => Debug.Log($"[방석 수] 메인 {Main}개, 정상 레인 {Ok}개 (끝 칸 {OkEnd}/2), 불량 레인 {Ng}개 (끝 칸 {NgEnd}/2)", this);
 }
