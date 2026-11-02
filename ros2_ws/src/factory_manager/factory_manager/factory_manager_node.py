@@ -71,7 +71,9 @@ class FactoryManager(Node):
         # ── 판단 규칙 (순수 Python) ──
         self.fsm = Fsm()
         self.grader = Grader(param('normal_weight_min_kg', 0.80), param('normal_weight_max_kg', 1.20))
-        self.feed_rule = FeedRule(param('lane_capacity_count', 15), param('load_timeout_sec', 3.0))
+        self.feed_rule = FeedRule(param('lane_capacity_count', 15), param('load_timeout_sec', 3.0),
+                                  param('lane_end_slots', 2))
+        self.lane_end_full_logged = False  # '레인 끝 가득' 로그를 바뀔 때만 찍기 위해
         self.pallets = PalletBook(param('pallet_capacity', 5))
         self.agv = AgvDispatcher()
         self.watchdog = Watchdog(param('weight_report_timeout_sec', 15.0), param('agv_timeout_sec', 30.0))
@@ -239,6 +241,13 @@ class FactoryManager(Node):
             self.get_logger().warn(f'/conveyor_1_load를 읽을 수 없어 무시: {msg.data}')
             return
         self.feed_rule.on_load(load, self.now_sec())
+        full = self.feed_rule.lane_end_full()
+        if full != self.lane_end_full_logged:  # 11/02 A: 레인 끝 칸이 다 차면 컨베이어와 팔1 투입을 멈춤
+            self.lane_end_full_logged = full
+            if full:
+                self.get_logger().info(f'레인 끝 칸 가득 (ok {load["ok_end"]}/2, ng {load["ng_end"]}/2) → 컨베이어 정지, 로봇팔1 투입 대기')
+            else:
+                self.get_logger().info('레인 끝 칸 자리 남 → 컨베이어 가동, 로봇팔1 투입 재개')
         self.step()
 
     def on_placed(self, pallet, msg):
@@ -306,7 +315,9 @@ class FactoryManager(Node):
     def step(self):
         """장비 명령은 여기서만 정한다."""
         run = self.fsm.state == RUNNING
-        self.set_conveyor(run)
+        # 11/02 A: 레인 끝 칸(집는 자리+대기)이 다 찬 레인이 있으면 RUNNING이어도 컨베이어를 멈춘다 (상태는 RUNNING 유지).
+        #          팔2·3이 집어서 칸이 비면 다시 돈다. 팔1 투입도 FeedRule이 같은 조건으로 막는다
+        self.set_conveyor(run and not self.feed_rule.lane_end_full())
         if run and self.feed_rule.can_feed(self.bin_count, self.arm1_busy, self.now_sec()):
             self.feed()
         cmd = self.agv.try_dispatch(run, self.pallets.front_ready())

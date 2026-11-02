@@ -25,6 +25,12 @@
 //     (예전엔 적재함 → 벨트로 갈 때 베이스가 반대쪽(랙 쪽)으로 크게 돌았다)
 //   - 자동 홈(useAutoHome): Play 시작 때 homeToolPos 위에서 공구가 아래를 보는 자세를 IK로 구해 홈으로 쓴다.
 //     팔1은 적재함과 투입 위치 사이 위쪽 (Tools/INDEX/로봇팔1 만들기가 채움). 예전 홈은 팔3 기준이라 랙 쪽을 봤다
+//
+// 11/02 A (선반에서 옆으로 집기, sidePickWhenStanding): 집을 방석이 서 있으면(윗면이 옆을 봄, CushionBin rackMode)
+//   방석 앞 sideApproachDist → 흡착면까지 수평으로 들어가 붙이고 → 살짝 들어 수평으로 빼낸 뒤
+//   → 놓기 위로 가면서 손목을 돌려 공구가 아래를 보게 한다 (방석이 같이 돌아 눕혀짐) → 놓기는 예전과 같다.
+//   공구 방향은 "아래를 보는 자세"를 흡착면 쪽으로 돌린 것이라 ToolPoint 축 정의와 상관없이 맞는다.
+//   방석이 누워 있으면(팔2·3, 예전 적재함) 예전 위에서 집기 그대로.
 
 using System;
 using System.Collections;
@@ -55,6 +61,14 @@ public class ArmPickPlace : MonoBehaviour
     [SerializeField] private float maxPickOffset = 0.5f;
     [Tooltip("팔1 전용: 적재함. 연결하면 box_id가 빈 요청은 적재함의 다음 칸(위층부터) 방석을 집는다")]
     [SerializeField] private CushionBin feedBin;
+
+    [Header("선반에서 옆으로 집기 (11/02 A)")]
+    [Tooltip("켜면 서 있는 방석(윗면이 옆을 봄)은 앞에서 수평으로 집는다")]
+    [SerializeField] private bool sidePickWhenStanding = true;
+    [Tooltip("흡착면 앞 이 거리(m)에서 수평으로 들어가고 빼낸다. 선반 밖까지")]
+    [SerializeField] private float sideApproachDist = 0.25f;
+    [Tooltip("붙인 뒤 빼낼 때 살짝 드는 높이 (m). 선반판에 끌리지 않게")]
+    [SerializeField] private float sideLift = 0.02f;
 
     [Header("자동 홈 (11/01 A)")]
     [Tooltip("켜면 Play 시작 때 homeToolPos 위에서 공구가 아래를 보는 자세를 홈으로 쓴다")]
@@ -203,50 +217,100 @@ public class ArmPickPlace : MonoBehaviour
 
         // ── 2. 목표 자세와 관절값 미리 계산 ──
         Bounds b = col.bounds;
-        float h = b.size.y;
         Vector3 up = Vector3.up;
-        Vector3 pickTop = new Vector3(b.center.x, b.max.y, b.center.z);
+        var cc = cushion.GetComponent<Cushion>();
+        // 누웠을 때 높이(두께). 서 있는 방석은 bounds 높이가 0.4라서 Cushion 데이터 값을 쓴다
+        float h = cc != null && cc.HeightM > 0f ? cc.HeightM : b.size.y;
         Vector3 placeTop = placeBottom + up * (h + placeClearance);
-        // 11/01 A: 집기 위·놓기 위를 같은 높이(둘 중 높은 쪽 + approachHeight)로 → 수직으로 올라가서, 수평으로 돌고, 수직으로 내려간다
-        float safeY = Mathf.Max(pickTop.y, placeTop.y) + approachHeight;
-        Vector3 pickAbove = new Vector3(pickTop.x, safeY, pickTop.z);
-        Vector3 placeAbove = new Vector3(placeTop.x, safeY, placeTop.z);
 
-        // yaw는 90° 단위 4가지 중 손목이 덜 도는 쪽부터 시도 (손목 관절 한계에 걸리면 다음 후보)
+        bool side = sidePickWhenStanding && Vector3.Dot(cushion.transform.up, up) < 0.5f;
         var q0 = rig.GetJointPositions();
         string failed = "pick_above";
-        float[] qPa = null, qP = null, qLa = null, qL = null;
+        float[] qPa = null, qP = null, qPo = null, qLa = null, qL = null;
         bool planned = false;
-        // 11/01 A: 먼저 손목(wrist1·wrist2)이 크게 뒤집히지 않는 해만 찾고, 없을 때만 제한을 푼다
-        for (int pass = 0; pass < 2 && !planned; pass++)
+
+        if (side)
         {
-        foreach (float pickYaw in Candidates90(cushion.transform.eulerAngles.y, CurrentToolYaw()))
-        {
-            strictWrist = false;   // 홈 → 집기 위는 자유 (홈 자세와 손목이 달라도 됨)
-            if (!Plan(pickAbove, pickYaw, q0, out qPa)) { failed = "pick_above"; continue; }
-            strictWrist = pass == 0;   // 집은 뒤부터는 손목 고정 우선
-            if (!Plan(pickTop, pickYaw, qPa, out qP)) { failed = "pick"; continue; }
-            foreach (float placeYaw in Candidates90(placeYawDeg, pickYaw))
+            // 11/02 A: 서 있는 방석 → 앞에서 수평으로 집기
+            Vector3 n = cushion.transform.up; n.y = 0f; n.Normalize();          // 흡착면이 보는 방향 (팔 쪽)
+            Vector3 face = cc != null ? cc.TopCenter : b.center + n * (Mathf.Abs(Vector3.Dot(b.extents, n)));
+            Vector3 front = face + n * sideApproachDist;
+            Vector3 outP = front + up * sideLift;
+            Vector3 placeAbove = placeTop + up * approachHeight;
+            Quaternion toSide = Quaternion.FromToRotation(Vector3.down, -n);  // "아래를 보는 공구"를 흡착면 쪽으로
+
+            for (int pass = 0; pass < 2 && !planned; pass++)
             {
-                if (!Plan(placeAbove, placeYaw, qPa, out qLa)) { failed = "place_above"; continue; }
-                if (!Plan(placeTop, placeYaw, qLa, out qL)) { failed = "place"; continue; }
-                planned = true;
-                break;
+                foreach (float roll in Candidates90(0f, 0f))
+                {
+                    // 아래를 보는 자세(yaw = roll)를 그대로 옆으로 눕힌 것 → 공구 축이 -n
+                    var rotSide = toSide * Quaternion.LookRotation(Quaternion.Euler(0f, roll, 0f) * Vector3.forward, Vector3.down);
+                    strictWrist = false;
+                    if (!PlanRot(front, rotSide, q0, out qPa)) { failed = "side_front"; continue; }
+                    strictWrist = pass == 0;
+                    if (!PlanRot(face, rotSide, qPa, out qP)) { failed = "side_pick"; continue; }
+                    if (!PlanRot(outP, rotSide, qP, out qPo)) { failed = "side_out"; continue; }
+                    foreach (float placeYaw in Candidates90(placeYawDeg, CurrentToolYaw()))
+                    {
+                        strictWrist = false;   // 빼낸 뒤 → 놓기 위: 손목을 90° 돌려 눕힌다
+                        if (!Plan(placeAbove, placeYaw, qPo, out qLa)) { failed = "place_above"; continue; }
+                        strictWrist = pass == 0;
+                        if (!Plan(placeTop, placeYaw, qLa, out qL)) { failed = "place"; continue; }
+                        planned = true;
+                        break;
+                    }
+                    if (planned) break;
+                }
             }
-            if (planned) break;
+            strictWrist = false;
+            if (!planned)
+            {
+                Debug.LogWarning($"{Tag} 팔이 닿지 않음 (옆으로 집기): {failed} (흡착면 {face}, place {placeTop})", this);
+                onDone?.Invoke(false, "ik_failed:" + failed);
+                return;
+            }
         }
-        }
-        strictWrist = false;
-        if (!planned)
+        else
         {
-            Debug.LogWarning($"{Tag} 팔이 닿지 않음: {failed} (pick {pickTop}, place {placeTop})", this);
-            onDone?.Invoke(false, "ik_failed:" + failed);
-            return;
+            Vector3 pickTop = new Vector3(b.center.x, b.max.y, b.center.z);
+            // 11/01 A: 집기 위·놓기 위를 같은 높이(둘 중 높은 쪽 + approachHeight)로 → 수직으로 올라가서, 수평으로 돌고, 수직으로 내려간다
+            float safeY = Mathf.Max(pickTop.y, placeTop.y) + approachHeight;
+            Vector3 pickAbove = new Vector3(pickTop.x, safeY, pickTop.z);
+            Vector3 placeAbove = new Vector3(placeTop.x, safeY, placeTop.z);
+
+            // yaw는 90° 단위 4가지 중 손목이 덜 도는 쪽부터 시도 (손목 관절 한계에 걸리면 다음 후보)
+            // 11/01 A: 먼저 손목(wrist1·wrist2)이 크게 뒤집히지 않는 해만 찾고, 없을 때만 제한을 푼다
+            for (int pass = 0; pass < 2 && !planned; pass++)
+            {
+                foreach (float pickYaw in Candidates90(cushion.transform.eulerAngles.y, CurrentToolYaw()))
+                {
+                    strictWrist = false;   // 홈 → 집기 위는 자유 (홈 자세와 손목이 달라도 됨)
+                    if (!Plan(pickAbove, pickYaw, q0, out qPa)) { failed = "pick_above"; continue; }
+                    strictWrist = pass == 0;   // 집은 뒤부터는 손목 고정 우선
+                    if (!Plan(pickTop, pickYaw, qPa, out qP)) { failed = "pick"; continue; }
+                    foreach (float placeYaw in Candidates90(placeYawDeg, pickYaw))
+                    {
+                        if (!Plan(placeAbove, placeYaw, qPa, out qLa)) { failed = "place_above"; continue; }
+                        if (!Plan(placeTop, placeYaw, qLa, out qL)) { failed = "place"; continue; }
+                        planned = true;
+                        break;
+                    }
+                    if (planned) break;
+                }
+            }
+            strictWrist = false;
+            if (!planned)
+            {
+                Debug.LogWarning($"{Tag} 팔이 닿지 않음: {failed} (pick {pickTop}, place {placeTop})", this);
+                onDone?.Invoke(false, "ik_failed:" + failed);
+                return;
+            }
+            qPo = qPa;   // 위에서 집기: 집은 뒤 다시 집기 위로
         }
 
         done = onDone;
         timedOut = false;
-        running = StartCoroutine(Sequence(cushion, rb, qPa, qP, qLa, qL));
+        running = StartCoroutine(Sequence(cushion, rb, qPa, qP, qPo, qLa, qL));
     }
 
     /// <summary>E_STOP: 그 자리에서 멈추고 진행 중인 요청을 E_STOP으로 끝낸다. 든 방석은 그대로 든다</summary>
@@ -277,7 +341,8 @@ public class ArmPickPlace : MonoBehaviour
 
     // ── 동작 ──
 
-    IEnumerator Sequence(GameObject cushion, Rigidbody rb, float[] qPa, float[] qP, float[] qLa, float[] qL)
+    /// <summary>qPa: 집기 앞(위), qP: 집기, qPo: 집은 뒤 빼낸 자리(위에서 집기는 qPa와 같음), qLa: 놓기 위, qL: 놓기</summary>
+    IEnumerator Sequence(GameObject cushion, Rigidbody rb, float[] qPa, float[] qP, float[] qPo, float[] qLa, float[] qL)
     {
         float t0 = Time.time;
         string id = cushion.name;
@@ -294,7 +359,7 @@ public class ArmPickPlace : MonoBehaviour
         Picked?.Invoke(cushion);
         yield return new WaitForSeconds(gripDwellSec);
 
-        yield return MoveTo(qPa, t0); if (timedOut) { AbortTimeout(); yield break; }
+        yield return MoveTo(qPo, t0); if (timedOut) { AbortTimeout(); yield break; }
         yield return MoveTo(qLa, t0); if (timedOut) { AbortTimeout(); yield break; }
         yield return MoveTo(qL, t0); if (timedOut) { AbortTimeout(); yield break; }
 
@@ -384,10 +449,14 @@ public class ArmPickPlace : MonoBehaviour
     [SerializeField] private float maxWristTurnDeg = 60f;
     private bool strictWrist;
 
-    bool Plan(Vector3 toolPos, float yawDeg, float[] prev, out float[] q)
+    /// <summary>공구가 아래를 보고 yaw만 정한 자세</summary>
+    bool Plan(Vector3 toolPos, float yawDeg, float[] prev, out float[] q) =>
+        PlanRot(toolPos, Quaternion.LookRotation(Quaternion.Euler(0f, yawDeg, 0f) * Vector3.forward, Vector3.down), prev, out q);
+
+    /// <summary>공구 위치·방향을 직접 정한 자세 (11/02 A: 옆으로 집기)</summary>
+    bool PlanRot(Vector3 toolPos, Quaternion rot, float[] prev, out float[] q)
     {
         q = new float[rig.Joints.Length];
-        var rot = Quaternion.LookRotation(Quaternion.Euler(0f, yawDeg, 0f) * Vector3.forward, Vector3.down);
         var seeds = new[] { prev, rig.HomeRad, ElbowUpA, ElbowUpB };
         if (!Ik.Solve(toolPos, rot, seeds, q, out _, out _)) return false;
         Unwrap(q, prev);   // 같은 자세라도 직전 관절값에서 가장 짧게 도는 각도로
