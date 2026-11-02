@@ -77,6 +77,8 @@ public class PalletSlot : MonoBehaviour
         if (pallet == null) return null;
         leaving = pallet;
         pallet = null;
+        SetState(PalletState.OUT);
+        outSince = Time.time;
         return leaving;
     }
 

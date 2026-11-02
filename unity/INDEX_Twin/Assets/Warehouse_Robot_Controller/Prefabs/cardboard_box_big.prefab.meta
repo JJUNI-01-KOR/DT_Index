@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 3121d6be47e6ee145a8b744782911b2a
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 389700
+  packageName: Warehouse Robot Controller
+  packageVersion: 1.0
+  assetPath: Assets/Warehouse_Robot_Controller/Prefabs/cardboard_box_big.prefab
+  uploadId: 943844

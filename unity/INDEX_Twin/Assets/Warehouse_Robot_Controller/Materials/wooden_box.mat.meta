@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: a9aa6ce628c0c4145b4c793934ddda2a
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 389700
+  packageName: Warehouse Robot Controller
+  packageVersion: 1.0
+  assetPath: Assets/Warehouse_Robot_Controller/Materials/wooden_box.mat
+  uploadId: 943844

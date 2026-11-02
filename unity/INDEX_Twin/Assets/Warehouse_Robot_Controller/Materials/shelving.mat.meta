@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 1e2884c9f9985994a9c0ebc343894154
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 389700
+  packageName: Warehouse Robot Controller
+  packageVersion: 1.0
+  assetPath: Assets/Warehouse_Robot_Controller/Materials/shelving.mat
+  uploadId: 943844

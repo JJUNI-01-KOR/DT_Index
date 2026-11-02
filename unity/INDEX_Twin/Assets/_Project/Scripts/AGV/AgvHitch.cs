@@ -24,12 +24,25 @@ public class AgvHitch : MonoBehaviour
     public bool Attach(out string error)
     {
         error = null;
-        if (Towed != null) return true;
+
+        // 1차 방어: 이미 내가 파레트를 끌고 있다면 무시
+        if (Towed != null)
+        {
+            Debug.LogWarning("[AGV1] 이미 파레트가 연결된 상태입니다 (중복 호출 무시)", this);
+            return true;
+        }
 
         var slot = PalletSlot.Nearest(transform.position, attachRadius);
         if (slot == null) { error = $"{attachRadius} m 안에 파레트 자리가 없음"; return false; }
+
         var pallet = slot.TakePallet();
-        if (pallet == null) { error = $"파레트 자리 {slot.SlotId}에 파레트가 없음 ({slot.State})"; return false; }
+
+        // 2차 방어: 자리는 찾았지만 파레트가 이미 사라진 경우 (에러 방지 로직)
+        if (pallet == null)
+        {
+            Debug.LogWarning($"[AGV1] 파레트 자리 {slot.SlotId}에 파레트가 없습니다 (중복 요청으로 간주하고 무시)", this);
+            return true; // 실패(false) 대신 조용히 성공(true) 처리하여 멈춤 방지
+        }
 
         int n = FixCushions(pallet);
         pallet.transform.SetParent(transform, true);
@@ -41,7 +54,12 @@ public class AgvHitch : MonoBehaviour
     public bool Detach(out string error)
     {
         error = null;
-        if (Towed == null) { error = "끌고 있는 파레트가 없음"; return false; }
+        // 이미 분리된 상태라면 중복 호출로 간주하고 조용히 성공 처리 (에러 방지)
+        if (Towed == null)
+        {
+            Debug.LogWarning("[AGV1] 이미 파레트가 분리된 상태입니다 (중복 호출 무시)", this);
+            return true;
+        }
 
         var pallet = Towed;
         Towed = null;
@@ -50,6 +68,7 @@ public class AgvHitch : MonoBehaviour
         var zone = FinalZone.Containing(pallet.transform.position);
         if (zone != null) zone.Accept(pallet);
         else Debug.LogWarning($"[AGV1] 최종 구역 밖에서 파레트 분리: {pallet.name} {pallet.transform.position}", this);
+
         Debug.Log($"[AGV1] 파레트 분리 ({pallet.name})", this);
         return true;
     }

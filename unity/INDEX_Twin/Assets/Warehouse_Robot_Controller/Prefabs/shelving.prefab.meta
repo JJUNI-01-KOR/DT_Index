@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: e149a096b44e8144baac2bd55eaa6064
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 389700
+  packageName: Warehouse Robot Controller
+  packageVersion: 1.0
+  assetPath: Assets/Warehouse_Robot_Controller/Prefabs/shelving.prefab
+  uploadId: 943844

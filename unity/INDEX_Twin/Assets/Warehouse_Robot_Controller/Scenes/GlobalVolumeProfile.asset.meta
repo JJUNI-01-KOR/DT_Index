@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 4b0259ded3d6f004da80a6317ade0964
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 389700
+  packageName: Warehouse Robot Controller
+  packageVersion: 1.0
+  assetPath: Assets/Warehouse_Robot_Controller/Scenes/GlobalVolumeProfile.asset
+  uploadId: 943844

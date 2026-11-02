@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: b1ac17403bec16e40874265450662c9f
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 389700
+  packageName: Warehouse Robot Controller
+  packageVersion: 1.0
+  assetPath: Assets/Warehouse_Robot_Controller/Prefabs/wooden_box_point.prefab
+  uploadId: 943844
