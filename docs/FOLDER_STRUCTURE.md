@@ -151,10 +151,10 @@ ROS 통신은 **이 폴더에서만** 한다. 다른 스크립트는 여기 이�
 
 | 파일 | 상태 | 역할 | 관련 |
 |---|---|---|---|
-| `RosBridge.cs` | 수정 | `ROSConnection` 초기화, 연결 상태. 제어 패널 발행(`/factory/start`, `/factory/emergency_stop`, `/factory/fault_clear`), `/factory/state` → `FactoryStateChanged`, `/factory/stats` → `StatsReceived`·`CurrentFault` (상태 패널은 이 이벤트를 구독) | NFR-08 |
+| `RosBridge.cs` | 수정 | `ROSConnection` 초기화, 연결 상태. 제어 패널 발행(`/factory/start`, `/factory/emergency_stop`, `/factory/fault_clear`), `/factory/state` → `FactoryStateChanged`, `/factory/stats` → `StatsReceived`·`CurrentFault` (상태 패널은 이 이벤트를 구독). 통신 끊김: `RosLost`·`Healthy`·`RosLostChanged` (HeartbeatLink가 정함) | NFR-08, FR-17 |
 | `TopicNames.cs` | 수정 | 토픽 이름 상수. SRS 4.4 v3.1 표로 교체 (`detect_*`, `box_count`, `pallet_N_reset`, `arm_N_joint_states` 삭제, 새 토픽 추가) | NFR-08 |
 | `CoordConverter.cs` | 있음 | 좌표 변환 **유일한 곳**. `To<FLU>()`, `From<FLU>()` | SRS 4.4 |
-| `HeartbeatLink.cs` | 예정 | `/factory/heartbeat_unity` 1초 발행, `/factory/heartbeat_ros`가 3초 끊기면 장비 정지 + "ROS2 연결 끊김" | FR-17 |
+| `HeartbeatLink.cs` | 완료 (11/02) | `/factory/heartbeat_unity` 1초 발행. ROS2에서 3초 동안 아무것도(`/factory/heartbeat_ros`, `/factory/state`, `/factory/stats`) 못 받으면 끊김 → `RosBridge.SetRosLost`로 Unity 설비 E_STOP + 패널 "ROS2 LOST". 복구되면 `/factory/emergency_stop` true 1번 → [Clear]로 해제. 판정은 LateUpdate(에디터 멈춤 오판 방지). RosBridge가 Play 때 자동으로 붙임 (씬 수정 없음) | FR-17, NFR-04 |
 | `BinLink.cs`, `ConveyorLink.cs` | 수정 | 적재함·컨베이어 토픽 연결 (`/bin/count`, `/conveyor/cmd`, `/conveyor_1_load`) | FR-03~05 |
 | `ConnectionTest.cs` | 수정 | 세팅 검증용. `/detect_1_event` 발행 부분 삭제 | |
 | `LaneEndLink.cs` | 있음 | 레인 끝(Line/LaneEnd.cs) 1번 칸에 방석이 들어올 때마다 `/conveyor_1_end_ok`·`_ng`로 id 1회. E_STOP → IDLE에서 레인 끝 방석 비움 | FR-09, 16 |
@@ -201,7 +201,7 @@ AGV1과 파레트 순환 (SRS 부록 A.6). 판단은 하지 않고 명령대로 
 
 | 파일 | 담당 | 상태 | 역할 | 관련 |
 |---|---|---|---|---|
-| `ControlPanel.cs` | D | 수정 | [Start](IDLE일 때만), [Emergency](E_STOP 아닐 때, `/factory/emergency_stop` true), [Clear](E_STOP일 때만, false = 해제). 10/31: 비상정지·해제를 버튼 2개로 나눔. factory_manager가 E_STOP으로 시작하므로 처음 화면은 [Clear]만 켜짐. 버튼 상태는 `/factory/state`로 정함, ROS2 끊기면 모두 꺼짐. [Fix](ERROR이고 고장 장비가 있을 때만): 3초 누르면 `/factory/fault_clear`(장비 id, `/factory/stats`의 fault). 누르는 동안 버튼에 장비와 남은 시간 표시 | UI-02, FR-01, 16, 18 |
+| `ControlPanel.cs` | D | 수정 | [Start](IDLE일 때만), [Emergency](E_STOP 아닐 때, `/factory/emergency_stop` true), [Clear](E_STOP일 때만, false = 해제). 10/31: 비상정지·해제를 버튼 2개로 나눔. factory_manager가 E_STOP으로 시작하므로 처음 화면은 [Clear]만 켜짐. 버튼 상태는 `/factory/state`로 정함, ROS2 끊기거나 Heartbeat가 끊기면 모두 꺼짐. 11/02: [Start] 위에 연결 상태 글자 자동 생성 ("ROS2 connected · 상태" / 빨강 "ROS2 LOST"). [Fix](ERROR이고 고장 장비가 있을 때만): 3초 누르면 `/factory/fault_clear`(장비 id, `/factory/stats`의 fault). 누르는 동안 버튼에 장비와 남은 시간 표시 | UI-02, FR-01, 16, 18 |
 | `HoldButton.cs` | D | 있음 | 길게 누르기 (기본 3초). 중간에 떼거나 버튼이 꺼지면 처음부터. [Fix]에 붙음 | FR-18 |
 | `FaultSelector.cs` | D | ⚠ 예정 | [고장 주입] 대상(arm_1~3, conveyor). 유지 여부는 팀 결정(SRS FR-19 Could) | FR-19 |
 | `StatusPanel.cs` | A | 예정 | `/factory/state`, `/factory/stats`만 구독해 표시. 직접 세지 않음. 3초 못 받으면 회색. E_STOP이면 `estop` 원인 표시(비상정지, 통신 끊김, 무게 보고 시간 초과, AGV1 시간 초과, factory_manager 시작) | UI-03, FR-20 |

@@ -9,7 +9,10 @@
 //                고장 장비는 /factory/stats의 fault (RosBridge.CurrentFault). 버튼 글자에 장비와 남은 시간을 보여 준다
 // 버튼 상태는 내가 누른 것으로 정하지 않고 /factory/state(RosBridge.FactoryState)를 보고 매 프레임 정한다.
 // factory_manager가 E_STOP으로 시작하므로 처음 화면은 [Clear]만 켜져 있다. 통신 끊김·시간 초과로 E_STOP이 돼도 같다.
-// ROS2와 연결이 안 돼 있으면 모든 버튼이 꺼진다. statusText를 연결하면 "ROS2 연결 · 상태"를 보여 준다 (선택).
+// ROS2와 연결이 안 돼 있거나 Heartbeat가 끊기면(FR-17, RosBridge.Healthy) 모든 버튼이 꺼진다.
+// 왼쪽 아래 [Start] 위에 연결 상태 글자를 보여 준다. statusText 칸이 비어 있으면 Play 때 자동으로 만든다 (씬 수정 없음).
+//   "ROS2  connected · RUNNING" (흰색) · "ROS2  LOST (no heartbeat 3s) -> E_STOP" (빨강) · "ROS2  disconnected" (빨강)
+//   TMP 기본 글꼴에 한글이 없어 영어로 쓴다
 //
 // 준비: HUD에 이 스크립트를 붙이고 버튼 4개를 끌어 놓는다. [Fix]에는 HoldButton이 없으면 Play 때 자동으로 붙는다.
 //       씬에 RosBridge가 하나 있어야 한다.
@@ -28,8 +31,11 @@ public class ControlPanel : MonoBehaviour
     [SerializeField] private Button clearButton;
     [Tooltip("[Fix] 버튼 (3초 조치). ERROR일 때 3초 누르면 /factory/fault_clear(고장 장비)")]
     [SerializeField] private Button fixButton;
-    [Tooltip("(선택) ROS2 연결과 공정 상태를 보여 줄 글자")]
+    [Tooltip("(선택) ROS2 연결과 공정 상태를 보여 줄 글자. 비어 있으면 Play 때 [Start] 위에 자동으로 만든다")]
     [SerializeField] private TMP_Text statusText;
+
+    private static readonly Color OkColor = Color.white;
+    private static readonly Color BadColor = new Color(1f, 0.35f, 0.35f);
 
     private HoldButton fixHold;
     private TMP_Text fixLabel;
@@ -56,7 +62,28 @@ public class ControlPanel : MonoBehaviour
             fixLabel = fixButton.GetComponentInChildren<TMP_Text>(true);
             if (fixLabel != null) fixLabelDefault = fixLabel.text;
         }
+        if (statusText == null) statusText = CreateStatusText();
         Refresh();
+    }
+
+    /// <summary>[Start] 버튼 바로 위에 연결 상태 글자를 만든다 (글꼴은 버튼 글자와 같게)</summary>
+    TMP_Text CreateStatusText()
+    {
+        var start = (RectTransform)startButton.transform;
+        var go = new GameObject("ROS2 Status", typeof(RectTransform));
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(start.parent, false);
+        rt.anchorMin = rt.anchorMax = start.anchorMin;
+        rt.pivot = new Vector2(0f, 0f);
+        rt.anchoredPosition = start.anchoredPosition + new Vector2(0f, start.sizeDelta.y + 12f);
+        rt.sizeDelta = new Vector2(640f, 32f);
+        var t = go.AddComponent<TextMeshProUGUI>();
+        var sample = startButton.GetComponentInChildren<TMP_Text>(true);
+        if (sample != null) t.font = sample.font;
+        t.fontSize = 22f;
+        t.alignment = TextAlignmentOptions.MidlineLeft;
+        t.raycastTarget = false;
+        return t;
     }
 
     void OnDestroy()
@@ -73,7 +100,9 @@ public class ControlPanel : MonoBehaviour
     void Refresh()
     {
         var bridge = RosBridge.Instance;
-        bool connected = bridge != null && bridge.Connected;
+        bool linked = bridge != null && bridge.Connected;
+        bool lost = bridge != null && bridge.RosLost;
+        bool connected = linked && !lost;   // Endpoint 연결 + Heartbeat 정상 (RosBridge.Healthy)
         string state = bridge != null ? bridge.FactoryState : "";
         string fault = bridge != null ? bridge.CurrentFault : "";
 
@@ -96,8 +125,15 @@ public class ControlPanel : MonoBehaviour
 
         if (statusText != null)
         {
-            string s = !connected ? "ROS2 끊김" : $"ROS2 연결 · {(state == "" ? "상태 기다리는 중" : state)}";
-            if (s != shownStatus) { statusText.text = s; shownStatus = s; }
+            string s = !linked ? "ROS2  disconnected"
+                : lost ? "ROS2  LOST (no heartbeat 3s) -> E_STOP"
+                : $"ROS2  connected · {(state == "" ? "waiting for state" : state)}";
+            if (s != shownStatus)
+            {
+                statusText.text = s;
+                statusText.color = connected ? OkColor : BadColor;
+                shownStatus = s;
+            }
         }
     }
 
