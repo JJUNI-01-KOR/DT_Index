@@ -38,15 +38,15 @@ def test_parse_bad_kg():
 
 @pytest.fixture
 def grader():
-    return Grader(0.90, 1.10)   # SRS v3.1 부록 A.5 제안값
+    return Grader(0.80, 1.20)   # SRS v3.1 부록 A.5 제안값
 
 
 @pytest.mark.parametrize('kg, lane', [
-    (0.90, OK),   # 하한 = 정상
-    (1.10, OK),   # 상한 = 정상
+    (0.80, OK),   # 하한 = 정상
+    (1.20, OK),   # 상한 = 정상
     (1.00, OK),
-    (0.89, NG),   # 하한보다 0.01 작음
-    (1.11, NG),   # 상한보다 0.01 큼
+    (0.79, NG),   # 하한보다 0.01 작음
+    (1.21, NG),   # 상한보다 0.01 큼
     (0.70, NG),   # 불량 무게 범위 (부록 A.5)
     (1.30, NG),
 ])
@@ -60,13 +60,13 @@ def test_grade_no_weight_is_ng(grader):
 
 
 def test_grade_float_error_at_boundary(grader):
-    """1.0 + 0.1 = 1.1000000000000001 이어도 경계값 정상."""
-    assert grader.grade(1.0 + 0.1) == OK
+    """1.1 + 0.1 = 1.2000000000000002 이어도 경계값 정상."""
+    assert grader.grade(1.1 + 0.1) == OK
 
 
 def test_grader_rejects_reversed_range():
     with pytest.raises(ValueError):
-        Grader(1.10, 0.90)
+        Grader(1.20, 0.80)
 
 
 # ── diverter_cmd: (id, lane) → /diverter_1_cmd 글자 ──
