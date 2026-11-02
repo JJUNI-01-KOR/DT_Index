@@ -28,7 +28,7 @@ DT_Index/
 │   ├── dt_fake_unity/            # [C] Unity 없이 시험하는 가짜 노드 3종 (Unity, palletizer, agv_1_controller)
 │   ├── dt_arm/                   # 사용 안 함 (10.30 Unity IK 결정, 1.3절) → 정리 대상
 │   ├── dt_bringup/               # [C·D] launch + 설정 yaml
-│   ├── dt_description/           # [D] AGV1 URDF(단순화)와 RViz 표시
+│   ├── dt_description/           # [D] AGV1 URDF(단순화)와 공장 배치 RViz 표시
 │   └── ROS-TCP-Endpoint/         # 외부 패키지 (ROS2v0.7.0), vcs import, 직접 수정 금지
 │
 └── unity/INDEX_Twin/             # ── Unity 6 (6000.6.0f1) + URP (Windows) ──
@@ -145,13 +145,16 @@ Unity 없이 ROS2 쪽만 시험하기 위한 노드 (WBS 2.4, 3.13). v3.1에서 
 > 외부 패키지 ROS-TCP-Endpoint는 `ros2_ws/dependencies.repos`에 버전(ROS2v0.7.0)을 고정하고 `vcs import src < dependencies.repos`로 받는다. 저장소에는 올리지 않는다. 실행은 위 `tcp_endpoint_mt.py`로 한다.
 
 ### 1.8 `dt_description/` — [D] · scope `bringup`
-Unity AGV1을 RViz에서 모델로 보이게 한다. 주행은 Unity가 하고 여기는 표시만 한다 (FR-13 확인용).
+Unity AGV1을 RViz에서 모델로 보이게 하고 공장 배치를 같은 좌표로 그린다. 주행은 Unity가 하고 여기는 표시만 한다 (FR-13 확인·시연용).
 
 | 파일 | 상태 | 역할 |
 |---|---|---|
 | `urdf/agv_1.urdf` | 완료 (11/03 D) | robot_boxy를 상자·원기둥으로 단순화 (구매 에셋 메시는 쓰지 않음). 치수는 robot_boxy.fbx 뼈대에서 잼: 바퀴 간격 좌우 0.368·앞뒤 0.274 m, 높이 0.109. 바퀴 관절 이름 = Unity `bone_wheel_*` |
 | `launch/agv_1_display.launch.py` | 완료 (11/03 D) | robot_state_publisher(`/agv_1_joint_states` → 바퀴 TF, `/agv_1_description`) + RViz. `test:=true`면 Unity 없이 HOME에 고정해 모델만 확인 |
-| `rviz/agv_1.rviz` | 완료 (11/03 D) | Fixed Frame `map`, Grid, TF, RobotModel |
+| `rviz/agv_1.rviz` | 완료 (11/03 D) | Fixed Frame `map`, Grid, TF, Factory Layout, RobotModel |
+| `scripts/factory_layout_markers.py` | 완료 (11/03 D) | 컨베이어·파레트 자리·예비 자리·최종 구역·집는 자리·팔·적재함·무게 센서·분기·AGV 정지 지점과 경로 → `/factory_layout` (MarkerArray) |
+| `config/factory_layout.yaml` | 완료 (11/03 D) | 컨베이어 칸 위치 (Unity Main에서 뽑음, 직접 고치지 않음) |
+| `tools/export_unity_layout.py` | 완료 (11/03 D) | Main.unity → `factory_layout.yaml`. Main에서 컨베이어를 옮기면 다시 실행 |
 
 ---
 

@@ -1,0 +1,44 @@
+# factory_layout.yaml : Unity Main 씬에서 뽑은 공장 배치 (ROS 좌표, m · rad). 직접 고치지 않는다.
+# 만든 방법: python3 tools/export_unity_layout.py <Main.unity> config/factory_layout.yaml
+# conveyor_cells: 컨베이어 1 m 모듈 중심 (프리팹 이름은 Unity Hierarchy 이름)
+conveyor_cell_size: 1.0
+conveyor_belt_top: 0.5
+conveyor_cells:
+  - {x: -6.50, y: 5.50, yaw: 1.5708}   # CornerConveyor 2
+  - {x: -6.50, y: 6.50, yaw: 0.0000}   # Standard 1
+  - {x: -6.50, y: 7.50, yaw: 0.0000}   # Standard 3
+  - {x: -6.50, y: 8.50, yaw: 0.0000}   # Standard 4
+  - {x: -6.50, y: 9.50, yaw: 0.0000}   # Standard 5
+  - {x: -6.50, y: 10.50, yaw: 0.0000}   # Standard 6
+  - {x: -6.50, y: 11.50, yaw: 0.0000}   # Standard 7
+  - {x: -6.50, y: 12.50, yaw: 0.0000}   # Standard 8
+  - {x: -6.50, y: 13.50, yaw: 0.0000}   # Standard 9
+  - {x: -6.50, y: 14.50, yaw: 0.0000}   # Standard 10
+  - {x: -5.50, y: 5.50, yaw: 1.5708}   # Standard_Side5
+  - {x: -4.50, y: 5.50, yaw: 1.5708}   # Standard_Side4
+  - {x: -3.50, y: 5.50, yaw: 1.5708}   # Standard_Side3
+  - {x: -2.50, y: 5.50, yaw: 1.5708}   # Standard_Side2
+  - {x: -1.50, y: 5.50, yaw: 1.5708}   # Standard_Side1
+  - {x: -0.50, y: -1.50, yaw: 0.0000}   # Unloader
+  - {x: -0.50, y: -0.50, yaw: 0.0000}   # Inbound 2
+  - {x: -0.50, y: 0.50, yaw: 0.0000}   # Standard 0
+  - {x: -0.50, y: 1.50, yaw: 0.0000}   # Standard 1
+  - {x: -0.50, y: 2.50, yaw: 0.0000}   # Standard 2
+  - {x: -0.50, y: 3.50, yaw: 0.0000}   # Standard 3
+  - {x: -0.50, y: 4.50, yaw: 0.0000}   # Quality Check
+  - {x: -0.50, y: 5.50, yaw: 3.1416}   # JoinerConveyor
+  - {x: 0.50, y: 5.50, yaw: 1.5708}   # Standard_Side1-1
+  - {x: 1.50, y: 5.50, yaw: 1.5708}   # Standard_Side1-2
+  - {x: 2.50, y: 5.50, yaw: 1.5708}   # Standard_Side1-3
+  - {x: 3.50, y: 5.50, yaw: 1.5708}   # Standard_Side1-4
+  - {x: 4.50, y: 5.50, yaw: 1.5708}   # Standard_Side1-5
+  - {x: 5.50, y: 5.50, yaw: -3.1416}   # CornerConveyor 1
+  - {x: 5.50, y: 6.50, yaw: -3.1416}   # Standard 10
+  - {x: 5.50, y: 7.50, yaw: -3.1416}   # Standard 9
+  - {x: 5.50, y: 8.50, yaw: -3.1416}   # Standard 8
+  - {x: 5.50, y: 9.50, yaw: -3.1416}   # Standard 7
+  - {x: 5.50, y: 10.50, yaw: -3.1416}   # Standard 6
+  - {x: 5.50, y: 11.50, yaw: -3.1416}   # Standard 5
+  - {x: 5.50, y: 12.50, yaw: -3.1416}   # Standard 4
+  - {x: 5.50, y: 13.50, yaw: -3.1416}   # Standard 3
+  - {x: 5.50, y: 14.50, yaw: -3.1416}   # Standard 1
