@@ -1,13 +1,16 @@
-"""AGV1을 RViz에 모델로 표시한다 (FR-13 확인용). 담당 D · scope bringup
+"""AGV1 모델과 공장 배치를 RViz에 표시한다 (FR-13 확인·시연용). 담당 D · scope bringup
 
     ros2 launch dt_description agv_1_display.launch.py              # Unity Play 중: Unity가 보내는 /tf, /agv_1_joint_states로 움직임
     ros2 launch dt_description agv_1_display.launch.py test:=true    # Unity 없이 모델만: map → agv_1_link를 HOME에 고정, 바퀴 0
-    ros2 launch dt_description agv_1_display.launch.py rviz:=false   # robot_state_publisher만 (RViz는 따로 띄울 때)
+    ros2 launch dt_description agv_1_display.launch.py rviz:=false   # RViz 없이 (RViz는 따로 띄울 때)
+    ros2 launch dt_description agv_1_display.launch.py layout:=false # 공장 배치 표시물 없이
 
 robot_state_publisher가 urdf/agv_1.urdf를 읽어 agv_1_link → 몸통·바퀴 TF를 낸다.
   구독: /agv_1_joint_states (Unity AgvWaypointDriver, 바퀴 4개 각도, 10 Hz)
   발행: /agv_1_description (URDF 문자열, RViz RobotModel이 읽음), /tf, /tf_static
 map → agv_1_link는 Unity가 /tf로 보낸다 (이 launch가 내지 않음, test:=true일 때만 고정값).
+factory_layout_markers가 컨베이어(Unity Main에서 뽑은 config/factory_layout.yaml)와 line_coords·agv_waypoints 좌표를
+/factory_layout (MarkerArray)으로 낸다.
 """
 import os
 
@@ -29,17 +32,22 @@ def generate_launch_description():
 
     rviz = LaunchConfiguration('rviz')
     test = LaunchConfiguration('test')
+    layout = LaunchConfiguration('layout')
     zeros = '{name: [%s], position: [0.0, 0.0, 0.0, 0.0]}' % ', '.join(WHEELS)
 
     return LaunchDescription([
         DeclareLaunchArgument('rviz', default_value='true', description='RViz도 같이 띄움'),
         DeclareLaunchArgument('test', default_value='false', description='Unity 없이 모델만 확인 (HOME 고정, 바퀴 0)'),
+        DeclareLaunchArgument('layout', default_value='true', description='공장 배치 표시물 (/factory_layout)'),
 
         Node(package='robot_state_publisher', executable='robot_state_publisher',
              name='agv_1_state_publisher', output='screen',
              parameters=[{'robot_description': urdf}],
              remappings=[('joint_states', '/agv_1_joint_states'),
                          ('robot_description', '/agv_1_description')]),
+
+        Node(package='dt_description', executable='factory_layout_markers.py',
+             name='factory_layout_markers', output='screen', condition=IfCondition(layout)),
 
         Node(package='rviz2', executable='rviz2', name='rviz2', output='screen',
              arguments=['-d', os.path.join(share, 'rviz', 'agv_1.rviz')],
