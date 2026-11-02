@@ -71,7 +71,7 @@ class FactoryManager(Node):
         # ── 판단 규칙 (순수 Python) ──
         self.fsm = Fsm()
         self.grader = Grader(param('normal_weight_min_kg', 0.90), param('normal_weight_max_kg', 1.10))
-        self.feed_rule = FeedRule(param('lane_capacity_count', 3), param('load_timeout_sec', 3.0))
+        self.feed_rule = FeedRule(param('lane_capacity_count', 15), param('load_timeout_sec', 3.0))
         self.pallets = PalletBook(param('pallet_capacity', 5))
         self.agv = AgvDispatcher()
         self.watchdog = Watchdog(param('weight_report_timeout_sec', 15.0), param('agv_timeout_sec', 30.0))
