@@ -38,10 +38,15 @@ class Watchdog:
         if self.agv_since is not None:
             self.agv_since = now
 
-    def expired(self, now):
-        """초과한 감시가 있으면 E_STOP 원인(CAUSE_TIMEOUT_WEIGHT, CAUSE_TIMEOUT_AGV), 없으면 None.
-        RUNNING일 때만 부른다."""
-        if self.weight_since is not None and now - self.weight_since > self.weight_sec:
+    def restart_weight(self, now):
+        """컨베이어가 다시 돌면 무게 감시만 처음부터 다시 센다."""
+        if self.weight_since is not None:
+            self.weight_since = now
+
+    def expired(self, now, conveyor_on=True):
+        """초과한 감시가 있으면 E_STOP 원인, 없으면 None. 무게 감시는 컨베이어가 돌 때만 본다."""
+        if (conveyor_on and self.weight_since is not None
+                and now - self.weight_since > self.weight_sec):
             return CAUSE_TIMEOUT_WEIGHT
         if self.agv_since is not None and now - self.agv_since > self.agv_sec:
             return CAUSE_TIMEOUT_AGV

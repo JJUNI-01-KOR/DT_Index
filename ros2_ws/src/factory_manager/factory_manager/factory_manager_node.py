@@ -342,7 +342,7 @@ class FactoryManager(Node):
         self.publish_stats()
         self.check_arm1_timeout()
         if self.fsm.state == RUNNING:
-            cause = self.watchdog.expired(self.now_sec())
+            cause = self.watchdog.expired(self.now_sec(), self.conveyor_on is True)
             if cause is not None:
                 self.apply('감시 시간 초과', self.fsm.to_estop, cause)
         self.step()
@@ -401,6 +401,8 @@ class FactoryManager(Node):
         if on == self.conveyor_on:
             return
         self.conveyor_on = on
+        if on:
+            self.watchdog.restart_weight(self.now_sec())
         self.conveyor_pub.publish(Bool(data=on))
         self.get_logger().info(f'컨베이어 {"가동" if on else "정지"}')
 

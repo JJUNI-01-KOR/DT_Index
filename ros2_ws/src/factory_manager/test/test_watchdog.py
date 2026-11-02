@@ -39,3 +39,17 @@ def test_restart_does_not_start_idle_timer():
     w = Watchdog(15.0, 30.0)
     w.restart(10.0)
     assert w.expired(100.0) is None
+
+def test_weight_waits_while_conveyor_stopped():
+    w = Watchdog(15.0, 30.0)
+    w.start_weight(0.0)
+    assert w.expired(100.0, conveyor_on=False) is None
+    w.restart_weight(100.0)
+    assert w.expired(115.0) is None
+    assert w.expired(115.1) == CAUSE_TIMEOUT_WEIGHT
+
+
+def test_agv_counts_while_conveyor_stopped():
+    w = Watchdog(15.0, 30.0)
+    w.start_agv(0.0)
+    assert w.expired(30.1, conveyor_on=False) == CAUSE_TIMEOUT_AGV
