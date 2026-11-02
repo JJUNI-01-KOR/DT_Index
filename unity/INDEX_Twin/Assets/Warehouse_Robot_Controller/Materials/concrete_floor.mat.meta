@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 3c5060bc690cbfe44b69a9763e070454
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 389700
+  packageName: Warehouse Robot Controller
+  packageVersion: 1.0
+  assetPath: Assets/Warehouse_Robot_Controller/Materials/concrete_floor.mat
+  uploadId: 943844

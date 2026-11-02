@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 54aca27bba6e7494c87710e587d86819
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 389700
+  packageName: Warehouse Robot Controller
+  packageVersion: 1.0
+  assetPath: Assets/Warehouse_Robot_Controller/Prefabs/wooden_box.prefab
+  uploadId: 943844

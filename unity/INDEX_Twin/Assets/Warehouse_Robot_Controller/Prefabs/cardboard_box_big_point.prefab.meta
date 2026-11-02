@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: f2d86b158f799af45a6df8aa181d3d15
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 389700
+  packageName: Warehouse Robot Controller
+  packageVersion: 1.0
+  assetPath: Assets/Warehouse_Robot_Controller/Prefabs/cardboard_box_big_point.prefab
+  uploadId: 943844

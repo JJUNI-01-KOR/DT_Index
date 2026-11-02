@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 0bf88bc1798d8234cbdbd91a365eef5d
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 9100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 389700
+  packageName: Warehouse Robot Controller
+  packageVersion: 1.0
+  assetPath: Assets/Warehouse_Robot_Controller/Animations/robot_boxy_Animator Controller.controller
+  uploadId: 943844
