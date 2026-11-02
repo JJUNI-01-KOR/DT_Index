@@ -1,7 +1,7 @@
 """공정 상태 규칙 (SRS v3.1 부록 A.2). rclpy 없이 순수 Python → pytest로 바로 시험.
 
 메서드는 상태가 바뀌면 True를 돌려준다. 장비 명령은 노드가 정한다.
-지금은 시작(E_STOP), 해제, [시작], 비상정지·통신 끊김·감시 시간 E_STOP까지. ERROR와 고장 목록은 TODO.
+지금은 시작(E_STOP), 해제, [시작], 비상정지·통신 끊김·감시 시간 E_STOP까지. ERROR와 고장 목록까지.
 """
 import json
 
