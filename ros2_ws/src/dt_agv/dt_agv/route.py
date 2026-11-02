@@ -38,7 +38,9 @@ class AgvRoute:
             return None, '적재 중인데 HOME 받음 (무시)'
 
         self.cmd = cmd
-        self.steps = list(self.route.get(ROUTE_KEY[cmd], [])) + [self.stops[cmd]]
+        via = self.route.get(ROUTE_KEY[cmd], [])
+        # Unity AgvLink는 좌표를 줘도 wp 이름이 없으면 무시한다. 경로점은 '<cmd>_via', 마지막은 cmd 이름 그대로.
+        self.steps = [(f'{cmd}_via', p) for p in via] + [(cmd, self.stops[cmd])]
         self.pending_hitch = 'attach' if cmd in DOCKS else ('detach' if cmd == FINAL else None)
         return self._next_goal(), None
 
@@ -74,5 +76,5 @@ class AgvRoute:
         self.loaded = False
 
     def _next_goal(self):
-        step = self.steps.pop(0)
-        return {'x': step['x'], 'y': step['y'], 'yaw': step['yaw']}
+        name, step = self.steps.pop(0)
+        return {'wp': name, 'x': step['x'], 'y': step['y'], 'yaw': step['yaw']}
