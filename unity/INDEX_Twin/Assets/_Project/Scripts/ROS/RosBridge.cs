@@ -7,6 +7,9 @@
 //         /factory/fault_clear (std_msgs/String)   [Fix] 3초 → 고장 장비 id
 //   구독: /factory/state  (std_msgs/String)  IDLE, RUNNING, ERROR, E_STOP → FactoryStateChanged
 //         /factory/stats  (std_msgs/String, JSON) → StatsReceived, CurrentFault (fault 값)
+//   통신 끊김 (FR-17): HeartbeatLink를 자동으로 붙인다. 끊기면 SetRosLost(true) → FactoryState를 E_STOP으로 바꿔
+//         FactoryStateChanged를 구독하는 설비(팔·AGV·파레트 자리 등)가 실제 E_STOP과 같은 길로 멈춘다.
+//         복구되면 /factory/emergency_stop true를 1번 보내 factory_manager도 E_STOP으로 맞춘다 → [Clear]로 해제
 //
 // 확인 (VM):
 //   ros2 launch dt_bringup connect.launch.py
@@ -41,6 +44,18 @@ public class RosBridge : MonoBehaviour
     /// <summary>지금 고장 장비 (/factory/stats의 fault). 없으면 빈 문자열</summary>
     public string CurrentFault { get; private set; } = "";
 
+    /// <summary>ROS2에서 마지막으로 무언가(/factory/state·stats·heartbeat_ros)를 받은 시각 (realtimeSinceStartup). 아직 없으면 -1</summary>
+    public float LastHeardTime { get; private set; } = -1f;
+
+    /// <summary>Heartbeat가 끊겨 ROS2를 잃었다고 판정했는지 (HeartbeatLink가 정한다, FR-17)</summary>
+    public bool RosLost { get; private set; }
+
+    /// <summary>끊김을 판정하거나 복구했을 때 (true = 끊김)</summary>
+    public event Action<bool> RosLostChanged;
+
+    /// <summary>버튼을 눌러도 되는 상태: Endpoint 연결 + Heartbeat 정상</summary>
+    public bool Healthy => Connected && !RosLost;
+
     [Serializable]
     private class StatsHead { public string fault; }
 
@@ -66,6 +81,32 @@ public class RosBridge : MonoBehaviour
         ros.RegisterPublisher<StringMsg>(TopicNames.FaultClear);
         ros.Subscribe<StringMsg>(TopicNames.FactoryState, OnFactoryState);
         ros.Subscribe<StringMsg>(TopicNames.FactoryStats, OnStats);
+        if (GetComponent<HeartbeatLink>() == null) gameObject.AddComponent<HeartbeatLink>();   // FR-17
+    }
+
+    /// <summary>ROS2에서 무언가 받았음 (Heartbeat 판정용)</summary>
+    public void NotifyHeard() => LastHeardTime = Time.realtimeSinceStartup;
+
+    /// <summary>HeartbeatLink가 끊김·복구를 알린다 (FR-17)</summary>
+    public void SetRosLost(bool lost)
+    {
+        if (lost == RosLost) return;
+        RosLost = lost;
+        if (lost)
+        {
+            Debug.LogWarning($"[Heartbeat] ROS2 끊김: {Time.realtimeSinceStartup - LastHeardTime:F1}초 동안 받은 것 없음 → Unity 설비 E_STOP", this);
+            if (FactoryState != "E_STOP")
+            {
+                FactoryState = "E_STOP";
+                FactoryStateChanged?.Invoke("E_STOP");
+            }
+        }
+        else
+        {
+            Debug.Log("[Heartbeat] ROS2 복구 → factory_manager도 E_STOP으로 맞춤. [Clear]로 해제", this);
+            PublishEmergencyStop(true);
+        }
+        RosLostChanged?.Invoke(lost);
     }
 
     void OnDestroy()
@@ -81,6 +122,7 @@ public class RosBridge : MonoBehaviour
 
     void OnStats(StringMsg msg)
     {
+        NotifyHeard();
         LastStatsJson = msg.data;
         try
         {
@@ -96,6 +138,8 @@ public class RosBridge : MonoBehaviour
 
     void OnFactoryState(StringMsg msg)
     {
+        NotifyHeard();
+        if (RosLost) return;                    // 끊김 판정 중에는 Unity 쪽 E_STOP 유지 (다음 Update에서 복구 판정)
         if (msg.data == FactoryState) return;   // factory_manager가 1초마다 보내므로 바뀔 때만 알림
         Debug.Log($"[ROS→Unity] {TopicNames.FactoryState} {(FactoryState == "" ? "(처음)" : FactoryState)} → {msg.data}");
         FactoryState = msg.data;
