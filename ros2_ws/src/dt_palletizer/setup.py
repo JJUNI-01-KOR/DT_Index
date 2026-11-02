@@ -16,7 +16,7 @@ setup(
     zip_safe=True,
     maintainer='INDEX',
     maintainer_email='index-team@example.com',
-    description='출고 팔레트 적재·정리 (palletizer_node)',
+    description='레인 끝 방석을 파레트에 쌓기 (palletizer_1·palletizer_2)',
     license='Apache-2.0',
     tests_require=['pytest'],
     entry_points={

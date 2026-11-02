@@ -23,7 +23,7 @@ DT_Index/
 ├── ros2_ws/src/                  # ── ROS2 (Ubuntu 22.04 + Humble) ──
 │   ├── factory_interfaces/       # [B] 커스텀 srv (PickPlace.srv 하나)
 │   ├── factory_manager/          # [B] 공정 FSM, 무게 판정, 투입 조절, 운반 대기열, AGV1 명령
-│   ├── dt_palletizer/            # [C] palletizer_1·_2 (같은 코드, 레인 파라미터)
+│   ├── dt_palletizer/            # [D] palletizer_1·_2 (같은 코드, 레인 파라미터)
 │   ├── dt_agv/                   # [C] agv_1_controller (목적지 → 웨이포인트, 연결·분리)
 │   ├── dt_fake_unity/            # [C] Unity 없이 시험하는 가짜 노드 3종 (Unity, palletizer, agv_1_controller)
 │   ├── dt_arm/                   # 사용 안 함 (10.30 Unity IK 결정, 1.3절) → 정리 대상
@@ -98,14 +98,14 @@ DT_Index/
 |---|---|---|
 | `dt_arm/` 전체 | 삭제 | launch에서 빼고 6절 정리 PR에서 지운다 |
 
-### 1.4 `dt_palletizer/` — [C] · scope `palletizer`
+### 1.4 `dt_palletizer/` — [D] · scope `palletizer` (11/03 C → D)
 같은 코드를 레인 파라미터(`ok`/`ng`)만 바꿔 `palletizer_1`, `palletizer_2` 두 개로 띄운다. **적재 수는 직접 세지 않고** factory_manager가 보낸 `/pallet_N_count`를 쓴다.
 
 | 파일 | 상태 | 역할 | 관련 |
 |---|---|---|---|
-| `dt_palletizer/palletizer_node.py` | 수정 | `/conveyor_1_end_<lane>`으로 받은 방석 id를 도착 순서대로 기억. RUNNING이고 `/pallet_N_status`가 READY이며 `/pallet_N_count`가 적재 기준 미만이면 `/arm_(N+1)_pick_place` 호출. 성공하면 `/pallet_N_placed`(방석 id) 발행 후 count가 c+1로 바뀐 것을 보고 다음 방석 처리. 실패(Unity 팔 15초 자체 중단 포함)·20초 무응답이면 `/factory/fault` 발행 후 요청을 들고 기다리고 `/factory/retry`를 받으면 RUNNING에서 한 번 다시 보냄. `/factory/state`가 E_STOP → IDLE로 바뀌면 들고 있던 요청·retry 기억·방석 순서를 비움 | FR-09~11, 16, 18 |
-| `dt_palletizer/pallet_layout.py` | 예정 | k단 놓기 위치 = 파레트 자리 상면 + (k−1) × 방석 높이 (1×5 수직). `feature/palletizer-layout`(12칸 2×2×3단)을 1×5로 바꿔 사용 | FR-10, 11, NFR-06 |
-| `test/test_pallet_layout.py` | 예정 | 단 높이 계산 단위 테스트 | |
+| `dt_palletizer/palletizer_node.py` | 있음 | `/conveyor_1_end_<lane>`으로 받은 방석 id를 도착 순서대로 기억. RUNNING이고 `/pallet_N_status`가 READY이며 `/pallet_N_count`가 적재 기준 미만이면 `/arm_(N+1)_pick_place` 호출. 성공하면 `/pallet_N_placed`(방석 id) 발행 후 count가 c+1로 바뀐 것을 보고 다음 방석 처리. 실패(Unity 팔 15초 자체 중단 포함)·20초 무응답이면 `/factory/fault` 발행 후 요청을 들고 기다리고 `/factory/retry`를 받으면 RUNNING에서 한 번 다시 보냄. `/factory/state`가 E_STOP → IDLE로 바뀌면 들고 있던 요청·retry 기억·방석 순서를 비움 | FR-09~11, 16, 18 |
+| `dt_palletizer/stacker.py` | 있음 | 판단 모듈 (rclpy 없음): 대기열·호출 조건·응답 처리(성공·E_STOP·busy·no_cushion·실패)·20초 시간 초과·retry·해제 초기화. k단 놓기 높이 = 파레트 자리 상면 + (k−1) × 방석 높이 (1×5 수직) | FR-09~11, 16, 18, NFR-06 |
+| `test/test_stacker.py` | 있음 | 판단 단위 테스트 (스펙 시험 1~7) | |
 
 ### 1.5 `dt_agv/` — [C] · scope `agv`
 
@@ -270,7 +270,7 @@ AGV1과 파레트 순환 (SRS 부록 A.6). 판단은 하지 않고 명령대로 
                                           └─/conveyor/cmd(true)──▶ Conveyor.cs
 line_rules.py (투입 조건) ──/arm_1_pick_place──▶ 팔1 + BoxBin.cs (방석 id를 message로 응답)
 WeightScale.cs ──/scale_1_weight──▶ grading.py: ok ──/diverter_1_cmd──▶ Diverter.cs → 정상 레인
-LaneEnd.cs ──/conveyor_1_end_ok──▶ palletizer_1 (+ pallet_layout.py: k단 높이)
+LaneEnd.cs ──/conveyor_1_end_ok──▶ palletizer_1 (+ stacker.py: 호출 조건, k단 높이)
 palletizer_1 ──/arm_2_pick_place──▶ 팔2 → 파레트1 k단 ──/pallet_1_placed──▶ pallet_queue.py ──/pallet_1_count──▶ palletizer_1
 pallet_queue.py: 5개 → 운반 대기열 → agv_dispatch.py ──/agv_1_cmd(P1_DOCK)──▶ agv_1_controller_node.py
 agv_1_controller ──/agv_1_goal──▶ AgvWaypointDriver.cs + AgvHitch.cs ──/agv_1_status──▶ agv_1_controller ──/agv_1_loaded(true)──▶ agv_dispatch.py
@@ -305,4 +305,4 @@ stats.py ──/factory/stats──▶ StatusPanel.cs
 | `Common/DropParcel.cs` | 대기 칸 2개 삭제 (삭제함). `BufferZoneSensor`는 `Main.unity`가 쓰고 있어 LaneEnd 이후로 미룸 |
 | `Scenes/Sandbox/BoxTest.unity` | 지워진 BoxBin 프리팹을 참조하던 연습 씬 (삭제함) |
 | 팔4, 출고 팔레트(12칸), [팔레트 정리] 버튼 관련 코드 | 설비 삭제 |
-| 미머지 브랜치 `feature/bringup-launch-params`, `feature/bringup-line-coords`, `feature/palletizer-layout` | 머지하거나 v3.1 기준으로 다시 작업 (담당 김찬중 → palletizer는 박준영에게 이관) |
+| 미머지 브랜치 `feature/bringup-launch-params`, `feature/bringup-line-coords`, `feature/palletizer-layout` | 머지하거나 v3.1 기준으로 다시 작업. `feature/palletizer-layout`(12칸 2×2×3단)은 11/03 `stacker.py`로 대체되어 삭제 대상 |

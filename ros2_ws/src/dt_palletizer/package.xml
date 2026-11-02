@@ -3,7 +3,7 @@
 <package format="3">
   <name>dt_palletizer</name>
   <version>0.0.1</version>
-  <description>출고 팔레트 적재·정리 (palletizer_node)</description>
+  <description>레인 끝 방석을 파레트에 쌓기 (palletizer_1: 정상 → 팔2 → 파레트1, palletizer_2: 불량 → 팔3 → 파레트2)</description>
   <maintainer email="index-team@example.com">INDEX</maintainer>
   <license>Apache-2.0</license>
 
@@ -11,6 +11,8 @@
   <depend>std_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>factory_interfaces</depend>
+  <exec_depend>python3-yaml</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
 
   <test_depend>python3-pytest</test_depend>
 
