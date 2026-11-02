@@ -10,6 +10,9 @@
 //   통신 끊김 (FR-17): HeartbeatLink를 자동으로 붙인다. 끊기면 SetRosLost(true) → FactoryState를 E_STOP으로 바꿔
 //         FactoryStateChanged를 구독하는 설비(팔·AGV·파레트 자리 등)가 실제 E_STOP과 같은 길로 멈춘다.
 //         복구되면 /factory/emergency_stop true를 1번 보내 factory_manager도 E_STOP으로 맞춘다 → [Clear]로 해제
+//   [Emergency] (11/02): EmergencyStopNow()가 Unity 설비를 먼저 바로 멈추고(위와 같은 Unity 쪽 E_STOP) ROS에도 알린다.
+//         factory_manager가 E_STOP을 보내 줄 때까지 Unity는 E_STOP을 유지하고 1초마다 다시 보낸다 (manager가 느리거나 꺼져 있어도 설비는 이미 멈춤).
+//         [Clear](false)를 보내면 유지를 푼다
 //
 // 확인 (VM):
 //   ros2 launch dt_bringup connect.launch.py
@@ -60,6 +63,8 @@ public class RosBridge : MonoBehaviour
     private class StatsHead { public string fault; }
 
     private ROSConnection ros;
+    private bool holdEstop;          // Unity가 먼저 E_STOP했고 factory_manager의 E_STOP 확인을 기다리는 중
+    private float nextEstopRetry;
 
     void Awake()
     {
@@ -95,18 +100,50 @@ public class RosBridge : MonoBehaviour
         if (lost)
         {
             Debug.LogWarning($"[Heartbeat] ROS2 끊김: {Time.realtimeSinceStartup - LastHeardTime:F1}초 동안 받은 것 없음 → Unity 설비 E_STOP", this);
-            if (FactoryState != "E_STOP")
-            {
-                FactoryState = "E_STOP";
-                FactoryStateChanged?.Invoke("E_STOP");
-            }
+            LocalEstop();   // 끊기면 /conveyor/cmd false도 못 받으므로 컨베이어까지 Unity가 직접 세운다
         }
         else
         {
             Debug.Log("[Heartbeat] ROS2 복구 → factory_manager도 E_STOP으로 맞춤. [Clear]로 해제", this);
-            PublishEmergencyStop(true);
+            HoldEstopUntilConfirmed();
         }
         RosLostChanged?.Invoke(lost);
+    }
+
+    /// <summary>[Emergency] 버튼: Unity 설비를 바로 멈추고(Unity 쪽 E_STOP) ROS에도 알린다 (FR-16)</summary>
+    public void EmergencyStopNow()
+    {
+        Debug.LogWarning("[RosBridge] [Emergency] Unity 설비 바로 정지 + ROS에 비상정지 알림", this);
+        LocalEstop();
+        HoldEstopUntilConfirmed();
+    }
+
+    /// <summary>Unity 쪽 E_STOP: 상태를 E_STOP으로 바꿔 팔·AGV·파레트 자리를 멈추고, 컨베이어도 바로 세운다
+    /// (컨베이어는 원래 factory_manager의 /conveyor/cmd false로 멈추므로 그 답을 기다리지 않게)</summary>
+    void LocalEstop()
+    {
+        foreach (var g in FindObjectsByType<ConveyorGroup>()) g.SetRunning(false);
+        foreach (var c in FindObjectsByType<Conveyor>()) c.SetRunning(false);
+        if (FactoryState == "E_STOP") return;
+        FactoryState = "E_STOP";
+        FactoryStateChanged?.Invoke("E_STOP");
+    }
+
+    /// <summary>factory_manager가 E_STOP을 보내 줄 때까지 Unity E_STOP을 유지하고 /factory/emergency_stop true를 1초마다 보낸다</summary>
+    void HoldEstopUntilConfirmed()
+    {
+        holdEstop = true;
+        nextEstopRetry = Time.realtimeSinceStartup + 1f;
+        PublishEmergencyStop(true);
+    }
+
+    void Update()
+    {
+        if (!holdEstop || ros == null || Time.realtimeSinceStartup < nextEstopRetry) return;
+        nextEstopRetry = Time.realtimeSinceStartup + 1f;
+        if (!Connected) return;
+        try { ros.Publish(TopicNames.EmergencyStop, new BoolMsg(true)); }
+        catch (Exception) { ros.RegisterPublisher<BoolMsg>(TopicNames.EmergencyStop); }
     }
 
     void OnDestroy()
@@ -140,6 +177,12 @@ public class RosBridge : MonoBehaviour
     {
         NotifyHeard();
         if (RosLost) return;                    // 끊김 판정 중에는 Unity 쪽 E_STOP 유지 (다음 Update에서 복구 판정)
+        if (holdEstop)
+        {
+            if (msg.data != "E_STOP") return;   // factory_manager가 아직 비상정지를 못 받음 → Unity E_STOP 유지 (Update가 다시 보냄)
+            holdEstop = false;
+            Debug.Log("[RosBridge] factory_manager E_STOP 확인", this);
+        }
         if (msg.data == FactoryState) return;   // factory_manager가 1초마다 보내므로 바뀔 때만 알림
         Debug.Log($"[ROS→Unity] {TopicNames.FactoryState} {(FactoryState == "" ? "(처음)" : FactoryState)} → {msg.data}");
         FactoryState = msg.data;
@@ -161,6 +204,7 @@ public class RosBridge : MonoBehaviour
     /// <summary>[Emergency] true(누름) · [Clear] false(해제): /factory/emergency_stop 1번 (FR-16)</summary>
     public void PublishEmergencyStop(bool pressed)
     {
+        if (!pressed) holdEstop = false;      // [Clear]: 사람이 해제를 골랐으니 유지 끝
         if (ros == null)
         {
             Debug.LogWarning($"[RosBridge] ROS 연결 준비 전이라 {TopicNames.EmergencyStop}을 보내지 못함", this);

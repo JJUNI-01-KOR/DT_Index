@@ -3,13 +3,14 @@
 //
 // 버튼 4개 (10/31 결정: 비상정지와 해제를 버튼 2개로 나눔)
 //   [Start]      /factory/start true            IDLE일 때만 누를 수 있음
-//   [Emergency]  /factory/emergency_stop true   E_STOP이 아닐 때 누를 수 있음
+//   [Emergency]  Unity 설비를 바로 멈추고 /factory/emergency_stop true   E_STOP이 아닐 때 누를 수 있음
+//                11/02: ROS 연결과 상관없이 누를 수 있다. factory_manager 답을 기다리지 않고 Unity가 먼저 멈춘다 (RosBridge.EmergencyStopNow)
 //   [Clear]      /factory/emergency_stop false  E_STOP일 때만 누를 수 있음 (해제 → factory_manager가 IDLE로)
 //   [Fix]        /factory/fault_clear (장비 id)  ERROR이고 고장 장비가 있을 때만. 3초 동안 누르고 있어야 보냄 (HoldButton)
 //                고장 장비는 /factory/stats의 fault (RosBridge.CurrentFault). 버튼 글자에 장비와 남은 시간을 보여 준다
 // 버튼 상태는 내가 누른 것으로 정하지 않고 /factory/state(RosBridge.FactoryState)를 보고 매 프레임 정한다.
 // factory_manager가 E_STOP으로 시작하므로 처음 화면은 [Clear]만 켜져 있다. 통신 끊김·시간 초과로 E_STOP이 돼도 같다.
-// ROS2와 연결이 안 돼 있거나 Heartbeat가 끊기면(FR-17, RosBridge.Healthy) 모든 버튼이 꺼진다.
+// ROS2와 연결이 안 돼 있거나 Heartbeat가 끊기면(FR-17, RosBridge.Healthy) [Emergency]만 빼고 모든 버튼이 꺼진다.
 // 왼쪽 아래 [Start] 위에 연결 상태 글자를 보여 준다. statusText 칸이 비어 있으면 Play 때 자동으로 만든다 (씬 수정 없음).
 //   "ROS2  connected · RUNNING" (흰색) · "ROS2  LOST (no heartbeat 3s) -> E_STOP" (빨강) · "ROS2  disconnected" (빨강)
 //   TMP 기본 글꼴에 한글이 없어 영어로 쓴다
@@ -107,7 +108,7 @@ public class ControlPanel : MonoBehaviour
         string fault = bridge != null ? bridge.CurrentFault : "";
 
         startButton.interactable = connected && state == "IDLE";
-        emergencyButton.interactable = connected && state != "E_STOP";
+        emergencyButton.interactable = bridge != null && state != "E_STOP";   // 연결이 끊겨도 누를 수 있게
         clearButton.interactable = connected && state == "E_STOP";
 
         if (fixButton != null)
@@ -146,7 +147,7 @@ public class ControlPanel : MonoBehaviour
     void OnEmergencyClicked()
     {
         if (!HasBridge()) return;
-        RosBridge.Instance.PublishEmergencyStop(true);
+        RosBridge.Instance.EmergencyStopNow();   // Unity 먼저 정지 + ROS에 알림
     }
 
     void OnClearClicked()
