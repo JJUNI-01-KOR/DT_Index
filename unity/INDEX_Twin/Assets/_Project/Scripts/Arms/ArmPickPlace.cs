@@ -51,6 +51,8 @@ public class ArmPickPlace : MonoBehaviour
     [SerializeField] private string cushionTag = "Cushion";
     [Tooltip("box_id가 비었을 때(팔1) pick 위치에서 방석을 찾는 반경 (m)")]
     [SerializeField] private float searchRadius = 0.3f;
+    [Tooltip("box_id로 찾은 방석이 pick 위치에서 이보다(m) 멀면 다른 곳의 방석으로 보고 no_cushion (팔2·3)")]
+    [SerializeField] private float maxPickOffset = 0.5f;
     [Tooltip("팔1 전용: 적재함. 연결하면 box_id가 빈 요청은 적재함의 다음 칸(위층부터) 방석을 집는다")]
     [SerializeField] private CushionBin feedBin;
 
@@ -296,8 +298,9 @@ public class ArmPickPlace : MonoBehaviour
         yield return MoveTo(qLa, t0); if (timedOut) { AbortTimeout(); yield break; }
         yield return MoveTo(qL, t0); if (timedOut) { AbortTimeout(); yield break; }
 
-        grip.Release();
+        var placedRb = grip.Release();
         held = null;
+        if (placedRb != null && feedBin == null) SettleOnPallet(placedRb);
         Placed?.Invoke(cushion);
         LaneEnd.NotifyPlaced(cushion);   // 레인 끝 1번 칸 방석이었으면 뒤 방석을 당긴다
         yield return new WaitForSeconds(gripDwellSec);
@@ -419,10 +422,20 @@ public class ArmPickPlace : MonoBehaviour
         }
         if (!string.IsNullOrEmpty(id))
         {
-            if (LaneEnd.TryGetAtPick(id, out var atLane)) return atLane;
-            foreach (var g in GameObject.FindGameObjectsWithTag(cushionTag))
-                if (g.name == id && !IsHeld(g)) return g;
-            return null;
+            GameObject found = null;
+            if (LaneEnd.TryGetAtPick(id, out var atLane)) found = atLane;
+            else
+                foreach (var g in GameObject.FindGameObjectsWithTag(cushionTag))
+                    if (g.name == id && !IsHeld(g)) { found = g; break; }
+            if (found == null) return null;
+            // 11/02 D: 같은 id라도 pick_pose에서 멀면(다른 레인·적재함) 이 팔이 집을 방석이 아니다 → no_cushion
+            float off = Vector3.Distance(Bottom(found), near);
+            if (off > maxPickOffset)
+            {
+                Debug.LogWarning($"{Tag} 방석 '{id}'이(가) pick 위치에서 {off:F2} m 떨어져 있음 (허용 {maxPickOffset:F2} m). 다른 곳의 방석이라 집지 않음", this);
+                return null;
+            }
+            return found;
         }
 
         GameObject best = null;
@@ -430,12 +443,39 @@ public class ArmPickPlace : MonoBehaviour
         foreach (var g in GameObject.FindGameObjectsWithTag(cushionTag))
         {
             if (IsHeld(g)) continue;
-            var c = g.GetComponentInChildren<Collider>();
-            Vector3 bottom = c != null ? new Vector3(c.bounds.center.x, c.bounds.min.y, c.bounds.center.z) : g.transform.position;
-            float d = Vector3.Distance(bottom, near);
+            float d = Vector3.Distance(Bottom(g), near);
             if (d < bestD) { bestD = d; best = g; }
         }
         return best;
+    }
+
+    // 11/02 D: 방석 프리팹은 벨트용 무마찰 재질(Belt_NoFriction)이라 파레트 위에서 계속 미끄러져 쌓은 단이 무너진다.
+    //          팔2·3(적재함이 없는 팔)이 파레트에 놓은 방석은 마찰 재질로 바꾼다. 팔1은 벨트에 놓으므로 그대로 둔다
+    private static PhysicsMaterial placedMaterial;
+
+    static void SettleOnPallet(Rigidbody rb)
+    {
+        if (placedMaterial == null)
+        {
+            placedMaterial = new PhysicsMaterial("Cushion_OnPallet")
+            {
+                dynamicFriction = 0.8f,
+                staticFriction = 0.9f,
+                frictionCombine = PhysicsMaterialCombine.Maximum,   // 상대가 무마찰이어도 이 값을 쓴다
+                bounciness = 0f,
+                bounceCombine = PhysicsMaterialCombine.Minimum
+            };
+        }
+        foreach (var c in rb.GetComponentsInChildren<Collider>()) c.sharedMaterial = placedMaterial;
+        rb.linearVelocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+    }
+
+    /// <summary>방석 바닥 중심 (콜라이더 기준, 없으면 transform 위치)</summary>
+    static Vector3 Bottom(GameObject g)
+    {
+        var c = g.GetComponentInChildren<Collider>();
+        return c != null ? new Vector3(c.bounds.center.x, c.bounds.min.y, c.bounds.center.z) : g.transform.position;
     }
 
     static bool IsHeld(GameObject g)
