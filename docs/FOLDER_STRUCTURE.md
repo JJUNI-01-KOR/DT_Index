@@ -28,6 +28,7 @@ DT_Index/
 │   ├── dt_fake_unity/            # [C] Unity 없이 시험하는 가짜 노드 3종 (Unity, palletizer, agv_1_controller)
 │   ├── dt_arm/                   # 사용 안 함 (10.30 Unity IK 결정, 1.3절) → 정리 대상
 │   ├── dt_bringup/               # [C·D] launch + 설정 yaml
+│   ├── dt_description/           # [D] AGV1 URDF(단순화)와 RViz 표시
 │   └── ROS-TCP-Endpoint/         # 외부 패키지 (ROS2v0.7.0), vcs import, 직접 수정 금지
 │
 └── unity/INDEX_Twin/             # ── Unity 6 (6000.6.0f1) + URP (Windows) ──
@@ -142,6 +143,15 @@ Unity 없이 ROS2 쪽만 시험하기 위한 노드 (WBS 2.4, 3.13). v3.1에서 
 | `scripts/tcp_endpoint_mt.py` | 완료 (11/02 D) | ROS-TCP-Endpoint를 **스레드 16개**로 실행 (factory·connect launch가 씀). 기본 `default_server_endpoint`는 스레드 1개라 팔 서비스 응답(6~15초)을 기다리는 동안 다른 토픽 전달이 모두 멈춤 → 비상정지 지연, Heartbeat 끊김 오판 |
 
 > 외부 패키지 ROS-TCP-Endpoint는 `ros2_ws/dependencies.repos`에 버전(ROS2v0.7.0)을 고정하고 `vcs import src < dependencies.repos`로 받는다. 저장소에는 올리지 않는다. 실행은 위 `tcp_endpoint_mt.py`로 한다.
+
+### 1.8 `dt_description/` — [D] · scope `bringup`
+Unity AGV1을 RViz에서 모델로 보이게 한다. 주행은 Unity가 하고 여기는 표시만 한다 (FR-13 확인용).
+
+| 파일 | 상태 | 역할 |
+|---|---|---|
+| `urdf/agv_1.urdf` | 완료 (11/03 D) | robot_boxy를 상자·원기둥으로 단순화 (구매 에셋 메시는 쓰지 않음). 치수는 robot_boxy.fbx 뼈대에서 잼: 바퀴 간격 좌우 0.368·앞뒤 0.274 m, 높이 0.109. 바퀴 관절 이름 = Unity `bone_wheel_*` |
+| `launch/agv_1_display.launch.py` | 완료 (11/03 D) | robot_state_publisher(`/agv_1_joint_states` → 바퀴 TF, `/agv_1_description`) + RViz. `test:=true`면 Unity 없이 HOME에 고정해 모델만 확인 |
+| `rviz/agv_1.rviz` | 완료 (11/03 D) | Fixed Frame `map`, Grid, TF, RobotModel |
 
 ---
 
