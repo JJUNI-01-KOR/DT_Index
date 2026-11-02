@@ -139,8 +139,9 @@ Unity 없이 ROS2 쪽만 시험하기 위한 노드 (WBS 2.4, 3.13). v3.1에서 
 | `config/line_coords.yaml` | 수정 | 라인 좌표표 (ROS 좌표, m·rad): 적재함 칸, 투입 위치, 무게 센서, 분기 게이트, 집는 자리 2곳, 팔 베이스 3개, 파레트 자리 2곳, 예비 파레트 자리 2곳, 최종 구역. **바꾸려면 4명 합의** |
 | `config/agv_waypoints.yaml` | 수정 | AGV1 일방통행 루프 (대기 → 도킹 → 최종 구역 → 바깥 레인 → 대기) |
 | `config/fake_scenario.yaml` | 수정 | 1.6 참고 |
+| `scripts/tcp_endpoint_mt.py` | 완료 (11/02 D) | ROS-TCP-Endpoint를 **스레드 16개**로 실행 (factory·connect launch가 씀). 기본 `default_server_endpoint`는 스레드 1개라 팔 서비스 응답(6~15초)을 기다리는 동안 다른 토픽 전달이 모두 멈춤 → 비상정지 지연, Heartbeat 끊김 오판 |
 
-> 외부 패키지 ROS-TCP-Endpoint는 `ros2_ws/dependencies.repos`에 버전(ROS2v0.7.0)을 고정하고 `vcs import src < dependencies.repos`로 받는다. 저장소에는 올리지 않는다.
+> 외부 패키지 ROS-TCP-Endpoint는 `ros2_ws/dependencies.repos`에 버전(ROS2v0.7.0)을 고정하고 `vcs import src < dependencies.repos`로 받는다. 저장소에는 올리지 않는다. 실행은 위 `tcp_endpoint_mt.py`로 한다.
 
 ---
 
@@ -224,6 +225,7 @@ AGV1과 파레트 순환 (SRS 부록 A.6). 판단은 하지 않고 명령대로 
 | `_Project/Prefabs/AGV/` | `AGV_1`, `Pallet`, `PalletSlot`, `SpareRail`, `FinalZone` | |
 | `_Project/Prefabs/UI/` | `ControlPanel`, `StatusPanel` | |
 | `_Project/Settings/` | `LineSettings.asset`, 물리 재질, URP 설정 | |
+| `_Project/Models/Cushion/` | 방석 겉모양 메시(몸통·파이핑)와 천 짜임 텍스처 (11/02 D) | 직접 고치지 않는다. `Editor/CushionVisualBuilder.cs` (메뉴 INDEX > Build Cushion Visual)로 다시 만든다 → `Prefabs/Line/CushionVisual.prefab`. Cushion·Cushion 2 프리팹은 회색 큐브를 끄고 이것을 `Visual` 자식으로 씀 (충돌 상자·무게는 그대로) |
 | `_Project/Scenes/Main.unity` | 최종 씬 | **D만 수정** |
 | `_Project/Scenes/Sandbox/<이름>_*.unity` | 개인 시험 씬 | 각자 자유, Main에 영향 없음 |
 | `RosMessages/` | `Robotics > Generate ROS Messages`로 만든 C# (FactoryInterfaces) | 직접 수정 금지, 재생성만 |
