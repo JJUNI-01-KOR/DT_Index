@@ -19049,19 +19049,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3e59d605b68d1d547a4aafd9a35e1ad1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: ConveyorSystem.Demo::ConveyorSystem.Demo.DemoCamera
-  Focus: {x: 0.6, y: 0.4, z: -0.8}
-  Distance: 18.5
+  Focus: {x: -8.4, y: 0.4, z: -0.5}
+  Distance: 30
   Pitch: 41
   Yaw: -12
-  MinDistance: 6
-  MaxDistance: 30
+  MinDistance: 4
+  MaxDistance: 45
   MinPitch: 20
   MaxPitch: 80
   RotateSpeed: 50
   ZoomStep: 1.5
   EnablePan: 1
   PanSpeed: 8
-  PanLimit: {x: 14, y: 10}
+  PanLimit: {x: 17.5, y: 11.5}
   AutoOrbitSpeed: 0
   IdleDelay: 10
 --- !u!114 &1682589922
