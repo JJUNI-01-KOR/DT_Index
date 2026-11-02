@@ -173,7 +173,7 @@ class FactoryManager(Node):
 
     def on_heartbeat_unity(self, msg):
         """Unity Heartbeat 수신 (FR-17)."""
-        # (FR-17): 받은 시각 기록. on_tick에서 heartbeat_timeout_sec 넘으면 fsm.to_estop(CAUSE_HEARTBEAT)
+        # 받은 시각 기록. on_tick에서 heartbeat_timeout_sec 넘으면 fsm.to_estop(CAUSE_HEARTBEAT)
         self.unity_heard_at = self.now_sec()
 
     # ── 장비 보고 ────────────────────────────────────────────
@@ -206,8 +206,6 @@ class FactoryManager(Node):
         if self.feed_rule.on_weight(cushion):
             self.watchdog.stop_weight()
         self.step()
-
-        # TODO(FR-02): feed_rule.on_weight, watchdog.stop_weight
 
     def on_load(self, msg):
         """/conveyor_1_load {"main", "ok", "ng"} (FR-04)."""
@@ -303,11 +301,8 @@ class FactoryManager(Node):
         self.publish_state()
         for n in (1,2):
             self.publish_count(n)
-        # TODO(FR-17): /factory/heartbeat_ros 발행, Unity Heartbeat 끊김 검사
         # TODO(FR-02, 13): RUNNING이면 watchdog.expired(now) → fsm.to_estop(원인)
         self.publish_stats()
-        # if self.conveyor_on is not None:
-        #     self.conveyor_pub.publish(Bool(data=self.conveyor_on))
         self.step()
 
     def feed(self):
