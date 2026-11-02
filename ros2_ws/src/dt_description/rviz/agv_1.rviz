@@ -1,0 +1,73 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+  - Class: rviz_common/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Name: Grid
+      Enabled: true
+      Cell Size: 1
+      Plane Cell Count: 40
+      Reference Frame: <Fixed Frame>
+      Color: 160; 160; 164
+      Alpha: 0.5
+      Value: true
+    - Class: rviz_default_plugins/TF
+      Name: TF
+      Enabled: true
+      Show Arrows: false
+      Show Axes: true
+      Show Names: false
+      Marker Scale: 0.6
+      Frames:
+        All Enabled: false
+        map:
+          Value: true
+        agv_1_link:
+          Value: true
+      Value: true
+    - Class: rviz_default_plugins/RobotModel
+      Name: AGV1
+      Enabled: true
+      Description Source: Topic
+      Description Topic:
+        Value: /agv_1_description
+        Depth: 5
+        Durability Policy: Transient Local
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+      Visual Enabled: true
+      Collision Enabled: false
+      Alpha: 1
+      Value: true
+  Enabled: true
+  Global Options:
+    Fixed Frame: map
+    Background Color: 40; 42; 46
+    Frame Rate: 30
+  Tools:
+    - Class: rviz_default_plugins/Interact
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+    - Class: rviz_default_plugins/FocusCamera
+    - Class: rviz_default_plugins/Measure
+  Value: true
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Name: Current View
+      Target Frame: <Fixed Frame>
+      Focal Point:
+        X: -0.75
+        Y: 19.5
+        Z: 0
+      Distance: 13
+      Pitch: 0.9
+      Yaw: 3.6
+      Value: Orbit (rviz)
+Window Geometry:
+  Height: 860
+  Width: 1280
