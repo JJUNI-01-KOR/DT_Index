@@ -33,14 +33,24 @@ class Watchdog:
 
     def restart(self, now):
         """RUNNING으로 돌아옴. 기다리던 감시는 처음부터 다시 센다."""
-        # TODO(FR-02, 13)
-        raise NotImplementedError
+        if self.weight_since is not None:
+            self.weight_since = now
+        if self.agv_since is not None:
+            self.agv_since = now
 
-    def expired(self, now):
-        """초과한 감시가 있으면 E_STOP 원인(CAUSE_TIMEOUT_WEIGHT, CAUSE_TIMEOUT_AGV), 없으면 None.
-        RUNNING일 때만 부른다."""
-        # TODO(FR-02, 13)
-        raise NotImplementedError
+    def restart_weight(self, now):
+        """컨베이어가 다시 돌면 무게 감시만 처음부터 다시 센다."""
+        if self.weight_since is not None:
+            self.weight_since = now
+
+    def expired(self, now, conveyor_on=True):
+        """초과한 감시가 있으면 E_STOP 원인, 없으면 None. 무게 감시는 컨베이어가 돌 때만 본다."""
+        if (conveyor_on and self.weight_since is not None
+                and now - self.weight_since > self.weight_sec):
+            return CAUSE_TIMEOUT_WEIGHT
+        if self.agv_since is not None and now - self.agv_since > self.agv_sec:
+            return CAUSE_TIMEOUT_AGV
+        return None
 
     def reset(self):
         """E_STOP 해제 때 초기화 (FR-16 6번)."""
