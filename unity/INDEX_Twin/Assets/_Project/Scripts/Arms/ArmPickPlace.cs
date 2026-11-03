@@ -31,6 +31,15 @@
 //   → 놓기 위로 가면서 손목을 돌려 공구가 아래를 보게 한다 (방석이 같이 돌아 눕혀짐) → 놓기는 예전과 같다.
 //   공구 방향은 "아래를 보는 자세"를 흡착면 쪽으로 돌린 것이라 ToolPoint 축 정의와 상관없이 맞는다.
 //   방석이 누워 있으면(팔2·3, 예전 적재함) 예전 위에서 집기 그대로.
+//
+// 11/03 A (선반 관통 수정): 빼낸 자리에서 바로 놓기 위로 가면 관절 보간 + 손목 90° 회전 때문에
+//   방석이 랙(기둥·선반판)을 뚫고 지나갔다. 그래서 랙 근처에서는 방석을 세운 채로 두고, 눕히는 건 벨트 위에서 한다.
+//   빼낸 뒤 ① 물러나기: 세운 채 랙에서 sideRetreatOut 더 떨어지고 sideRetreatUp 만큼 든다
+//          ② 나르기: 세운 채(공구가 팔 바깥쪽을 봄) 벨트 쪽으로 sideTurnStart 비율만큼 간다 (랙에서 충분히 떨어짐)
+//          ③ 돌리며 나르기: 남은 길을 가면서 눕히고 벨트 방향(놓을 yaw)에 맞춘다 → 벨트 위 sideCarryUp 높이에 도착
+//          ④ 놓기 위 → ⑤ 놓기 (이미 정렬돼 있어서 수직으로만 내려감)
+//   ①~③은 지나가는 점이라 멈춰서 자리 잡기를 기다리지 않는다 (viaToleranceDeg 안에 들면 다음으로) → 끊김 없이 이어짐
+//   팔이 닿지 않으면 거리를 줄여 다시 찾고, 끝내 안 되면 예전 동선(Console 경고).
 
 using System;
 using System.Collections;
@@ -69,6 +78,17 @@ public class ArmPickPlace : MonoBehaviour
     [SerializeField] private float sideApproachDist = 0.25f;
     [Tooltip("붙인 뒤 빼낼 때 살짝 드는 높이 (m). 선반판에 끌리지 않게")]
     [SerializeField] private float sideLift = 0.02f;
+    [Tooltip("11/03 A: 빼낸 자리보다 랙에서 더 떨어지는 거리 (m). 세운 방석이 랙에 걸리면 늘린다")]
+    [SerializeField] private float sideRetreatOut = 0.12f;
+    [Tooltip("11/03 A: 물러날 때 함께 드는 높이 (m)")]
+    [SerializeField] private float sideRetreatUp = 0.08f;
+    [Tooltip("11/03 A: 세운 방석을 나를 때 놓기 위보다 더 드는 높이 (m). 벨트 위에서 눕힐 때 방석이 벨트에 닿으면 늘린다")]
+    [SerializeField] private float sideCarryUp = 0.12f;
+    [Tooltip("11/03 A: 벨트까지 가는 길 중 이 비율(0~1)까지는 세운 채로 가고, 나머지 길에서 눕히며 정렬한다")]
+    [Range(0.1f, 0.9f)]
+    [SerializeField] private float sideTurnStart = 0.35f;
+    [Tooltip("11/03 A: 지나가는 점은 관절이 이 각도(도) 안에 들어오면 멈추지 않고 다음으로 간다")]
+    [SerializeField] private float viaToleranceDeg = 8f;
 
     [Header("자동 홈 (11/01 A)")]
     [Tooltip("켜면 Play 시작 때 homeToolPos 위에서 공구가 아래를 보는 자세를 홈으로 쓴다")]
@@ -98,6 +118,9 @@ public class ArmPickPlace : MonoBehaviour
     private Vector3 heldOrigPos;
     private Quaternion heldOrigRot;
     private bool heldOrigKinematic;
+
+    // 11/03 A: 물러날 거리 배율. 앞에서부터 시도, 0이면 예전 동선(물러나기 없음)
+    private static readonly float[] RetreatScales = { 1f, 0.6f, 0.3f, 0f };
 
     private static readonly float[] ElbowUpA = { 0f, -1.0f, 1.5f, -0.5f, 1.57f, 0f };
     private static readonly float[] ElbowUpB = { 3.14f, -1.0f, 1.5f, -0.5f, 1.57f, 0f };
@@ -227,6 +250,7 @@ public class ArmPickPlace : MonoBehaviour
         var q0 = rig.GetJointPositions();
         string failed = "pick_above";
         float[] qPa = null, qP = null, qPo = null, qLa = null, qL = null;
+        float[] qPr = null, qPt = null, qPf = null;   // 11/03 A: 옆으로 집기 뒤 물러나기·세운 채 나르기·눕혀 정렬 (위에서 집기는 null)
         bool planned = false;
 
         if (side)
@@ -252,12 +276,47 @@ public class ArmPickPlace : MonoBehaviour
                     if (!PlanRot(outP, rotSide, qP, out qPo)) { failed = "side_out"; continue; }
                     foreach (float placeYaw in Candidates90(placeYawDeg, CurrentToolYaw()))
                     {
-                        strictWrist = false;   // 빼낸 뒤 → 놓기 위: 손목을 90° 돌려 눕힌다
-                        if (!Plan(placeAbove, placeYaw, qPo, out qLa)) { failed = "place_above"; continue; }
-                        strictWrist = pass == 0;
-                        if (!Plan(placeTop, placeYaw, qLa, out qL)) { failed = "place"; continue; }
-                        planned = true;
-                        break;
+                        // 11/03 A: 물러나기 → (세운 채) 나르기 → 벨트 위에서 눕히기. 닿지 않으면 거리를 줄여 다시
+                        foreach (float k in RetreatScales)
+                        {
+                            float[] from = qPo;
+                            qPr = qPt = qPf = null;
+                            if (k > 0f)
+                            {
+                                Vector3 retreat = outP + (n * sideRetreatOut + up * sideRetreatUp) * k;
+                                strictWrist = pass == 0;
+                                if (!PlanRot(retreat, rotSide, qPo, out qPr)) { failed = "side_retreat"; continue; }
+
+                                // 벨트 위 도착점(눕혀 정렬된 자세)과, 그쪽으로 sideTurnStart 만큼 간 중간점(아직 세운 채)
+                                Vector3 over = placeAbove + up * (sideCarryUp * k);
+                                Vector3 mid = Vector3.Lerp(retreat, over, sideTurnStart);
+                                mid.y = Mathf.Max(retreat.y, over.y);
+                                Vector3 outward = mid - transform.position; outward.y = 0f;
+                                bool carried = false;
+                                if (outward.sqrMagnitude > 1e-4f)
+                                {
+                                    // 공구가 팔 바깥쪽(베이스에서 먼 쪽)을 봄 → 방석은 세운 채
+                                    var rotCarry = Quaternion.FromToRotation(Vector3.down, outward.normalized)
+                                                   * Quaternion.LookRotation(Quaternion.Euler(0f, roll, 0f) * Vector3.forward, Vector3.down);
+                                    strictWrist = pass == 0;
+                                    carried = PlanRot(mid, rotCarry, qPr, out qPt);
+                                }
+                                if (!carried) { strictWrist = false; carried = PlanRot(mid, rotSide, qPr, out qPt); }   // 방향 그대로라도
+                                if (!carried) { failed = "side_carry"; continue; }
+                                strictWrist = false;   // 남은 길에서 손목을 돌려 눕히고 벨트 방향으로 맞춘다
+                                if (!Plan(over, placeYaw, qPt, out qPf)) { failed = "side_turn"; continue; }
+                                from = qPf;
+                            }
+                            strictWrist = k > 0f && pass == 0;   // 놓기 위: 이미 정렬됨 → 내려가기만 (k = 0이면 예전처럼 빼낸 자리에서 바로)
+                            if (!Plan(placeAbove, placeYaw, from, out qLa)) { failed = "place_above"; continue; }
+                            strictWrist = pass == 0;
+                            if (!Plan(placeTop, placeYaw, qLa, out qL)) { failed = "place"; continue; }
+                            if (k <= 0f) Debug.LogWarning($"{Tag} 물러나기·나르기 자리에 팔이 닿지 않아 예전 동선으로 감 (랙을 스칠 수 있음)", this);
+                            else if (k < 1f) Debug.Log($"{Tag} 물러나기·나르기 거리를 {k * 100f:F0}%로 줄여서 감", this);
+                            planned = true;
+                            break;
+                        }
+                        if (planned) break;
                     }
                     if (planned) break;
                 }
@@ -310,7 +369,7 @@ public class ArmPickPlace : MonoBehaviour
 
         done = onDone;
         timedOut = false;
-        running = StartCoroutine(Sequence(cushion, rb, qPa, qP, qPo, qLa, qL));
+        running = StartCoroutine(Sequence(cushion, rb, qPa, qP, qPo, qPr, qPt, qPf, qLa, qL));
     }
 
     /// <summary>E_STOP: 그 자리에서 멈추고 진행 중인 요청을 E_STOP으로 끝낸다. 든 방석은 그대로 든다</summary>
@@ -341,8 +400,9 @@ public class ArmPickPlace : MonoBehaviour
 
     // ── 동작 ──
 
-    /// <summary>qPa: 집기 앞(위), qP: 집기, qPo: 집은 뒤 빼낸 자리(위에서 집기는 qPa와 같음), qLa: 놓기 위, qL: 놓기</summary>
-    IEnumerator Sequence(GameObject cushion, Rigidbody rb, float[] qPa, float[] qP, float[] qPo, float[] qLa, float[] qL)
+    /// <summary>qPa: 집기 앞(위), qP: 집기, qPo: 집은 뒤 빼낸 자리(위에서 집기는 qPa와 같음),
+    /// qPr·qPt·qPf: 옆으로 집기 뒤 물러나기·세운 채 나르기·눕혀 정렬 (지나가는 점, 없으면 null), qLa: 놓기 위, qL: 놓기</summary>
+    IEnumerator Sequence(GameObject cushion, Rigidbody rb, float[] qPa, float[] qP, float[] qPo, float[] qPr, float[] qPt, float[] qPf, float[] qLa, float[] qL)
     {
         float t0 = Time.time;
         string id = cushion.name;
@@ -360,6 +420,10 @@ public class ArmPickPlace : MonoBehaviour
         yield return new WaitForSeconds(gripDwellSec);
 
         yield return MoveTo(qPo, t0); if (timedOut) { AbortTimeout(); yield break; }
+        // 11/03 A: 지나가는 점 (멈추지 않고 이어서)
+        if (qPr != null) { yield return MoveTo(qPr, t0, viaToleranceDeg); if (timedOut) { AbortTimeout(); yield break; } }
+        if (qPt != null) { yield return MoveTo(qPt, t0, viaToleranceDeg); if (timedOut) { AbortTimeout(); yield break; } }
+        if (qPf != null) { yield return MoveTo(qPf, t0, viaToleranceDeg); if (timedOut) { AbortTimeout(); yield break; } }
         yield return MoveTo(qLa, t0); if (timedOut) { AbortTimeout(); yield break; }
         yield return MoveTo(qL, t0); if (timedOut) { AbortTimeout(); yield break; }
 
@@ -379,7 +443,8 @@ public class ArmPickPlace : MonoBehaviour
         Finish(true, id);
     }
 
-    IEnumerator MoveTo(float[] q, float t0)
+    /// <summary>viaTolDeg > 0: 지나가는 점. 그 각도 안에 들면 자리 잡기를 기다리지 않고 바로 끝낸다 (11/03 A)</summary>
+    IEnumerator MoveTo(float[] q, float t0, float viaTolDeg = 0f)
     {
         rig.SetJointTargets(q);
         yield return new WaitForFixedUpdate();
@@ -388,6 +453,7 @@ public class ArmPickPlace : MonoBehaviour
         {
             if (t0 != float.MaxValue && Time.time - t0 > timeoutSec) { timedOut = true; yield break; }
             if (!rig.IsMoving) yield break;
+            if (viaTolDeg > 0f && WithinTolerance(q, viaTolDeg)) yield break;
             settled = WithinTolerance(q) ? settled + Time.deltaTime : 0f;
             if (settled >= 0.15f) yield break;
             yield return null;
@@ -435,11 +501,13 @@ public class ArmPickPlace : MonoBehaviour
         rig.SetJointTargetsImmediate(now);
     }
 
-    bool WithinTolerance(float[] q)
+    bool WithinTolerance(float[] q) => WithinTolerance(q, settleToleranceDeg);
+
+    bool WithinTolerance(float[] q, float tolDeg)
     {
         var now = rig.GetJointPositions();
         for (int i = 0; i < q.Length; i++)
-            if (Mathf.Abs(now[i] - q[i]) * Mathf.Rad2Deg > settleToleranceDeg) return false;
+            if (Mathf.Abs(now[i] - q[i]) * Mathf.Rad2Deg > tolDeg) return false;
         return true;
     }
 
