@@ -269,9 +269,10 @@ public class StatusPanel : MonoBehaviour
         int seg = Mathf.Min(cap, 10);
         int on = Mathf.RoundToInt((float)n / cap * seg);
         var bar = new StringBuilder();
-        bar.Append("<cspace=-0.12em>");
-        for (int i = 0; i < seg; i++) bar.Append(i < on ? "|" : $"<alpha=#33>|<alpha=#FF>");
-        bar.Append("</cspace>");
+        // 11/03 A 테스트: 글자 간격을 좁히면 막대가 한 덩어리로 뭉쳐 안 보여서 간격을 벌림
+        bar.Append("<cspace=0.12em><size=115%>");
+        for (int i = 0; i < seg; i++) bar.Append(i < on ? "|" : "<alpha=#40>|<alpha=#FF>");
+        bar.Append("</size></cspace>");
         return $"{v.Value} / {cap}   <b>{bar}</b>";
     }
 
