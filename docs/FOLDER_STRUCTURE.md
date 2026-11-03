@@ -37,6 +37,7 @@ DT_Index/
         │   ├── Scripts/  ROS/ Arms/ Line/ AGV/ UI/ Common/
         │   ├── Prefabs/  Arm/ Line/ AGV/ UI/
         │   ├── Materials/  Settings/
+        │   ├── Resources/UI/  Play 때 코드로 불러오는 UI 이미지 (FaultWarning.png)
         │   └── Scenes/   Main.unity, Sandbox/
         ├── RosMessages/          # 자동 생성 C# 메시지, 직접 수정 금지
         ├── URDF/                 # Fairino URDF + 메시 (LFS)
@@ -220,6 +221,7 @@ AGV1과 파레트 순환 (SRS 부록 A.6). 판단은 하지 않고 명령대로 
 | `StatusPanel.cs` | A | 수정 | `/factory/state`, `/factory/stats`만 구독해 표시. 직접 세지 않음. 3초 못 받으면 회색. E_STOP이면 `estop` 원인 표시(비상정지, 통신 끊김, 무게 보고 시간 초과, AGV1 시간 초과, factory_manager 시작). 11/03 B: 제어 버튼을 패널에서 빼고(→ `ControlBar.cs`) 패널 크기를 `panelSize`(400×450)로 고정, 네 탭 모두 같음. 오른쪽 위 [STATUS] 메뉴 버튼(열기/닫기, Tab과 같음, 패널이 열리면 패널 왼쪽 위로) | UI-03, FR-20 |
 | `ControlBar.cs` | B | 있음 | 제어 버튼 8개를 오른쪽 아래에 늘 보이게 모음(ControlPanel의 연결 상태 글자는 숨김, 상태 패널에 같은 내용이 나옴). Play 때 Title Panel 폭 600, 상태 배너 위쪽 정가운데로(씬 값은 그대로). 윗줄 [고장 주입] Arm1·Arm2·Arm3·Line(회색, RUNNING·연결 정상일 때만, `/factory/inject_fault`, Line = `conveyor`), 가운데 [Fix][Emergency](주황·빨강), 아랫줄 [Start][Clear](초록·파랑). 씬 버튼을 옮기고 색만 바꿈(동작은 ControlPanel 그대로). Play 때 자동으로 붙음(씬 수정 없음). 따로 두려던 `FaultSelector.cs`는 만들지 않음 | UI-02, FR-01, 16, 18, 19 |
 | `StatusBanner.cs` | A | 예정 | 공정 상태 색, ERROR(고장 장비)·E_STOP·통신 끊김 경고 배너 | FR-16~18 |
+| `FaultMarker.cs` | B | 있음 | ERROR일 때 고장 장비(fault) 머리 위 경고 아이콘(`Resources/UI/FaultWarning`, 없으면 노란 네모). 아이콘을 클릭하면 [Fix]가 펼쳐지고 3초 누르면 `/factory/fault_clear`. 로봇팔은 그 팔 위, conveyor는 라인 가운데 위. Play 때 자동 생성(씬 수정 없음). 상태 패널 [Fix]와 같은 일 | FR-18 |
 
 ### 2.6 `_Project/Scripts/Common/`
 
