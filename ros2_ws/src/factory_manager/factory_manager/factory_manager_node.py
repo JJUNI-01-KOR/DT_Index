@@ -1,9 +1,9 @@
 """factory_manager — 공정 FSM과 라인 명령권. 담당 B · scope `manager`
 
-SRS v3.1 기준 뼈대. 판단 규칙은 순수 Python 모듈(fsm, grading, line_rules, pallet_queue,
+SRS v3.1 기준. 판단 규칙은 순수 Python 모듈(fsm, grading, line_rules, pallet_queue,
 agv_dispatch, watchdog, stats)에 두고, 이 노드는 토픽을 연결하고 장비 명령을 step() 한 곳에서 정한다 (부록 A.3).
-지금 동작하는 것: E_STOP으로 시작 → [해제] → IDLE → [시작] → RUNNING → 컨베이어 가동, 비상정지 → 정지.
-나머지 콜백은 받은 값만 저장하고 TODO(FR-xx)로 남겨 둔다.
+E_STOP으로 시작 → [해제] → IDLE → [시작] → RUNNING → 팔1 투입·무게 판정·분기·파레트 적재·AGV 운반.
+집기 실패·고장 주입은 ERROR, 비상정지·통신 끊김·감시 시간 초과는 E_STOP (FR-16~19).
 
 실행: ros2 run factory_manager factory_manager_node
 """
