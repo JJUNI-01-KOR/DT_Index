@@ -8,7 +8,11 @@
 //   LINE     Main, OK lane, NG lane
 //   PALLETS  Pallet 1, Pallet 2, Queue
 //   AGV1     Command, Loaded, Towing, Cycle
-//   맨 아래  [Fix] [Clear] 버튼 (제어 패널 버튼을 이 패널로 옮겨 붙임, 동작은 ControlPanel 그대로), 마지막으로 받은 뒤 지난 시간
+//   맨 아래  마지막으로 받은 뒤 지난 시간
+//   제어 버튼(Start·Emergency·Fix·Clear·고장 주입)은 패널에 두지 않고 오른쪽 아래 ControlBar가 늘 보이게 둔다 (11/03 B)
+//   패널 크기는 panelSize(400×450)로 고정한다 (씬의 size 대신). 네 탭 모두 같은 크기. 아래 빈 칸이 적재함·로봇팔1을 가리지 않게
+// [STATUS] 메뉴 버튼 (11/03 B)
+//   오른쪽 위. 누르면 패널 열기/닫기 (Tab 키와 같음). 패널이 닫혀 있으면 패널 자리에, 열려 있으면 패널 왼쪽 위에 있다.
 // 탭 4개 (11/03 A)
 //   [MAIN] STATUS+PRODUCTION · [LINE] · [PALLETS] · [AGV1]. 장비를 클릭해 열면 MAIN부터 보인다. 탭을 눌러 바꾼다.
 //   탭 아이콘은 Play 때 코드로 그린다 (이미지 파일 없음). E_STOP·ERROR면 MAIN 탭 아이콘이 빨갛게.
@@ -18,7 +22,7 @@
 // 열고 닫기 (11/02 A)
 //   장비를 클릭해 열면 SelectionChanged로 알린다 → CameraFocus가 카메라를 그 장비로 당긴다 (11/03 A)
 //   처음에는 닫혀 있다. 로봇팔이나 AGV를 클릭하면 열리고 제목에 그 장비 이름이 나온다. [X]나 같은 장비를 다시 클릭하면 닫힌다.
-//   E_STOP·ERROR가 되면 [Clear]·[Fix]를 누를 수 있게 저절로 열린다 (autoOpenOnAlarm). 위쪽 가운데 배너는 늘 보인다.
+//   E_STOP·ERROR가 되면 원인과 고장 장비를 볼 수 있게 저절로 열린다 (autoOpenOnAlarm). 위쪽 가운데 배너는 늘 보인다.
 //   클릭 판정은 각 장비의 Renderer 경계 상자와 마우스 광선이 만나는지로 본다 (콜라이더가 없어도 됨). UI 위 클릭은 무시.
 // /factory/stats를 staleSec(3초) 넘게 못 받으면 값을 모두 회색으로 바꾼다 (FR-20 예외 처리).
 // TMP 기본 글꼴에 한글이 없어 영어로 쓴다 (ControlPanel과 같음).
@@ -43,10 +47,8 @@ public class StatusPanel : MonoBehaviour
     [Tooltip("오른쪽 위 모서리에서 떨어진 거리")]
     [SerializeField] private Vector2 margin = new Vector2(32f, 32f);
     [SerializeField] private float fontSize = 21f;
-    [Tooltip("패널로 옮겨 붙일 [Fix] 버튼 (비우면 HUD에서 이름 Fix_Button으로 찾음)")]
-    [SerializeField] private Button fixButton;
-    [Tooltip("패널로 옮겨 붙일 [Clear] 버튼 (비우면 HUD에서 이름 Clear_Button으로 찾음)")]
-    [SerializeField] private Button clearButton;
+    [Tooltip("패널 크기 (씬의 size 대신 씀, 11/03 B). 네 탭 모두 이 크기")]
+    [SerializeField] private Vector2 panelSize = new Vector2(400f, 450f);
     [Tooltip("처음에 닫아 둘지 (로봇팔·AGV를 클릭하면 열림)")]
     [SerializeField] private bool startHidden = true;
     [Tooltip("E_STOP·ERROR가 되면 저절로 열지")]
@@ -114,6 +116,7 @@ public class StatusPanel : MonoBehaviour
     private Image[] tabBg;
     private Image[] tabIcon;
     private TMP_Text[] tabLabel;
+    private RectTransform menuButton;    // [STATUS] 메뉴 (11/03 B)
 
     void Start()
     {
@@ -142,6 +145,7 @@ public class StatusPanel : MonoBehaviour
         HandleClick();
         HandleKeys();
         AutoOpen();
+        PlaceMenu();
         // 1초마다 다시 그림: 회색 전환·"지난 시간"·상태 변화 반영
         if (Time.unscaledTime >= nextFooter)
         {
@@ -411,7 +415,7 @@ public class StatusPanel : MonoBehaviour
         }
     }
 
-    /// <summary>E_STOP·ERROR가 되는 순간 한 번 연다 ([Clear]·[Fix]가 패널 안에 있으므로)</summary>
+    /// <summary>E_STOP·ERROR가 되는 순간 한 번 연다 (원인·고장 장비 표시)</summary>
     void AutoOpen()
     {
         if (!autoOpenOnAlarm || bridge == null) return;
@@ -443,7 +447,7 @@ public class StatusPanel : MonoBehaviour
         panel.anchorMin = panel.anchorMax = new Vector2(1f, 1f);
         panel.pivot = new Vector2(1f, 1f);
         panel.anchoredPosition = new Vector2(-margin.x, -margin.y);
-        panel.sizeDelta = size;
+        panel.sizeDelta = panelSize;
         var bg = panel.gameObject.AddComponent<Image>();
         bg.color = PanelColor;
         bg.raycastTarget = false;
@@ -461,7 +465,7 @@ public class StatusPanel : MonoBehaviour
         var b = NewRect("Body", panel);
         b.anchorMin = new Vector2(0f, 0f);
         b.anchorMax = new Vector2(1f, 1f);
-        b.offsetMin = new Vector2(26f, 44f + ButtonRowH + 12f);
+        b.offsetMin = new Vector2(26f, 44f + 12f);
         b.offsetMax = new Vector2(-18f, -(TitleH + 16f + TabH + 16f));
         body = NewText(b, font, fontSize, TextAlignmentOptions.TopLeft);
         body.lineSpacing = 14f;
@@ -493,11 +497,7 @@ public class StatusPanel : MonoBehaviour
         xtr.anchorMin = Vector2.zero; xtr.anchorMax = Vector2.one; xtr.offsetMin = xtr.offsetMax = Vector2.zero;
         xt.text = "X";
 
-        // [Fix] [Clear]: 제어 패널 버튼을 이 패널 아래로 옮긴다 (ControlPanel이 계속 켜고 끄고 발행함)
-        if (fixButton == null) fixButton = FindButton(canvas.transform, "Fix_Button");
-        if (clearButton == null) clearButton = FindButton(canvas.transform, "Clear_Button");
-        Dock(fixButton, panel, 0f, 0.5f);
-        Dock(clearButton, panel, 0.5f, 1f);
+        BuildMenu(canvas.transform, font);
 
         var f = NewRect("Footer", panel);
         f.anchorMin = new Vector2(0f, 0f);
@@ -584,28 +584,51 @@ public class StatusPanel : MonoBehaviour
             tabLabel[i].color = fg;
         }
     }
-    const float ButtonRowH = 56f;
+    // ───────────────────────── [STATUS] 메뉴 (11/03 B) ─────────────────────────
 
-    /// <summary>버튼을 패널 아래 줄 [x0, x1] (패널 폭 비율) 칸으로 옮긴다</summary>
-    static void Dock(Button button, RectTransform panel, float x0, float x1)
+    static readonly Vector2 MenuSize = new Vector2(150f, 48f);
+
+    /// <summary>오른쪽 위 [STATUS] 버튼. 누르면 열기/닫기 (Tab 키와 같음)</summary>
+    void BuildMenu(Transform canvas, TMP_FontAsset font)
     {
-        if (button == null) return;
-        var rt = (RectTransform)button.transform;
-        rt.SetParent(panel, false);
-        rt.anchorMin = new Vector2(x0, 0f);
-        rt.anchorMax = new Vector2(x1, 0f);
-        rt.pivot = new Vector2(0.5f, 0f);
-        rt.offsetMin = new Vector2(x0 == 0f ? 26f : 6f, 44f);
-        rt.offsetMax = new Vector2(x1 == 1f ? -18f : -6f, 44f + ButtonRowH);
-        rt.localScale = Vector3.one;
+        var m = NewRect("Status Menu", canvas);
+        menuButton = m;
+        m.anchorMin = m.anchorMax = new Vector2(1f, 1f);
+        m.pivot = new Vector2(1f, 1f);
+        m.sizeDelta = MenuSize;
+        var bg = m.gameObject.AddComponent<Image>();
+        bg.color = PanelColor;
+        var btn = m.gameObject.AddComponent<Button>();
+        btn.targetGraphic = bg;
+        btn.onClick.AddListener(() => { if (IsOpen) Close(); else Open(); });
+
+        var accent = NewRect("Accent", m);
+        accent.anchorMin = new Vector2(0f, 0f);
+        accent.anchorMax = new Vector2(0f, 1f);
+        accent.pivot = new Vector2(0f, 0.5f);
+        accent.sizeDelta = new Vector2(6f, 0f);
+        accent.anchoredPosition = Vector2.zero;
+        var ai = accent.gameObject.AddComponent<Image>();
+        ai.color = AccentColor;
+        ai.raycastTarget = false;
+
+        var lr = NewRect("Label", m);
+        lr.anchorMin = Vector2.zero; lr.anchorMax = Vector2.one;
+        lr.offsetMin = new Vector2(6f, 0f); lr.offsetMax = Vector2.zero;
+        var label = NewText(lr, font, fontSize * 0.85f, TextAlignmentOptions.Center);
+        label.fontStyle = FontStyles.Bold;
+        label.color = HexColor(LabelColor);
+        label.text = enableHotkeys ? "<alpha=#88>Tab<alpha=#FF>  STATUS" : "STATUS";
+        PlaceMenu();
     }
 
-    static Button FindButton(Transform root, string name)
+    /// <summary>닫혀 있으면 패널 자리(오른쪽 위 모서리), 열려 있으면 패널 왼쪽 위</summary>
+    void PlaceMenu()
     {
-        foreach (var b in root.GetComponentsInChildren<Button>(true))
-            if (b.name == name) return b;
-        Debug.LogWarning($"[StatusPanel] HUD에서 {name} 버튼을 못 찾음", root);
-        return null;
+        if (menuButton == null) return;
+        float x = IsOpen ? -(margin.x + panelSize.x + 10f) : -margin.x;
+        var p = new Vector2(x, -margin.y);
+        if (menuButton.anchoredPosition != p) menuButton.anchoredPosition = p;
     }
 
     static RectTransform NewRect(string name, Transform parent)
