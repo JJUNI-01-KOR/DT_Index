@@ -1,4 +1,4 @@
-// FinalZoneDecorBuilder.cs : 최종 구역(Pallet_Finish) 꾸미기 (11/03 A). 담당 A · scope unity-env
+// FinalZoneDecorBuilder.cs : 최종 구역(Pallet_Finish) 꾸미기 (11/03 A). 담당 A · scope scene
 // 메뉴 INDEX > Factory > Build Final Zone Decor   (다시 누르면 지우고 새로 만듦)
 //      INDEX > Factory > Remove Final Zone Decor
 //
@@ -8,7 +8,7 @@
 // 만드는 것 (새 루트 "FinalZoneDecor" 하나, 프리팹으로 저장해 씬에는 인스턴스만)
 //   - 어두운 바닥 패드 + 노랑·검정 경고 테두리 + 안쪽 흰 모서리 표시
 //   - 파레트가 놓이는 자리 점선 (x -22) + "DROP" 글자
-//   - 남쪽 바닥 글자 "FINAL ZONE" (기본 카메라에서 읽힘), 동쪽 입구 진입 화살표 2개
+//   - 남쪽 바닥 글자 "FINAL ZONE" (기본 카메라에서 읽힘). 진입 화살표는 FactoryProps AGV 주행선이 그림
 //   - 북쪽 안내판 (기둥 2개 + "FINAL ZONE / SHIPPING"), 북서 모서리 신호등 탑(초록·주황·빨강)
 //   - 서쪽 모서리 볼라드 2개 (AGV 정지 위치 뒤)
 // 함께 고치는 것 (11/03 이슈 3): Pallet_Finish 바닥판이 y 0.1에 있어 내려놓은 파레트가 바닥판에 파묻혀 보였다.
@@ -32,6 +32,7 @@ public static class FinalZoneDecorBuilder
 
     // 바닥 테두리 범위 (중심 기준, m): 서쪽 1.5 · 동쪽 1.8 · 남북 1.25
     const float West = 1.5f, East = 1.8f, Half = 1.25f, Border = 0.2f;
+    const float AreaTop = 0.011f;   // Environment/Area의 Work Area 판 윗면 (두께 0.01)
 
     [MenuItem("INDEX/Factory/Build Final Zone Decor", priority = 30)]
     public static void Build()
@@ -40,15 +41,15 @@ public static class FinalZoneDecorBuilder
         var mPad = SB.Mat("Final_Pad", new Color(0.16f, 0.17f, 0.19f), 0.1f, 0f);
         var mWhite = SB.Mat("Factory_LineWhite", new Color(0.92f, 0.92f, 0.90f), 0.1f, 0f);
         var mGreen = SB.Mat("Final_LightGreen", new Color(0.1f, 0.8f, 0.3f), 0.5f, 0f, new Color(0.2f, 1.8f, 0.5f));
-        var mAmberOff = SB.Mat("Final_LightAmberOff", new Color(0.45f, 0.28f, 0.05f), 0.5f, 0f);
-        var mRedOff = SB.Mat("Final_LightRedOff", new Color(0.40f, 0.06f, 0.05f), 0.5f, 0f);
+        var mAmberOff = SB.Mat("Final_LightAmberOff", new Color(1f, 0.765f, 0f), 0.5f, 0f);    // 11/03 A가 Inspector에서 고른 색
+        var mRedOff = SB.Mat("Final_LightRedOff", new Color(1f, 0.022f, 0f), 0.5f, 0f);       // 11/03 A가 Inspector에서 고른 색
         var mBoard = SB.Mat("Factory_Banner", new Color(0.08f, 0.12f, 0.20f), 0.2f, 0f);
 
         // 중심: Pallet_Finish (FinalZone) 위치
         var zone = Object.FindFirstObjectByType<FinalZone>(FindObjectsInactive.Include);
         var finish = zone != null ? zone.gameObject : GameObject.Find("Pallet_Finish");
         Vector3 c = finish != null ? finish.transform.position : DefaultCenter;
-        c.y = 0f;
+        c.y = AreaTop;   // 라인 안쪽 바닥(Work Area 판, 윗면 y 0.01) 위에 그린다. 0이면 판 밑에 묻혀 안 보임
 
         Remove(false);
         var root = new GameObject(RootName);
@@ -81,7 +82,7 @@ public static class FinalZoneDecorBuilder
         var title = FactoryProps.Text(root, "Title", "FINAL ZONE", new Vector2(w * 0.9f, 0.5f), SB.mDoorFrame.GetColor("_BaseColor"));
         title.transform.localPosition = new Vector3(cx, 0.008f, -Half - 0.55f);
         title.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-        for (int k = 0; k < 2; k++) Chevron(root, new Vector3(East + 0.8f + k * 0.7f, 0.007f, 0f), mWhite);
+        // 진입 화살표는 FactoryProps의 AGV 주행선(실제 경로: 도킹 위치에서 대각선으로 들어옴)이 그린다
 
         // ── 북쪽 안내판 (남쪽을 봄) ──
         float bz = Half + 0.45f;
