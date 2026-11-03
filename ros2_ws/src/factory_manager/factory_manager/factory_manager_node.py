@@ -180,11 +180,6 @@ class FactoryManager(Node):
                 self.retry_pub.publish(String(data=device))
         self.pick_failed.clear()
         
-
-    def on_inject_fault(self, msg):
-        """[고장 주입] (FR-19, Could)."""
-        # TODO(FR-19): RUNNING에서만 fsm.on_fault(msg.data). 재전송 없음
-
     def on_fault(self, msg):
         """palletizer의 집기 실패 보고 {"device": "arm_2", "reason": "pick_failed"} (FR-18)."""
         device = parse_fault(msg.data)
