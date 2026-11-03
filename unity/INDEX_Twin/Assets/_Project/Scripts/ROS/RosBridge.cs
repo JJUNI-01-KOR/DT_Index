@@ -5,6 +5,7 @@
 //   발행: /factory/start  (std_msgs/Bool)    [동작] 버튼 → true 1번
 //         /factory/emergency_stop (std_msgs/Bool)  [Emergency] → true, [Clear] → false (해제)
 //         /factory/fault_clear (std_msgs/String)   [Fix] 3초 → 고장 장비 id
+//         /factory/inject_fault (std_msgs/String)  [고장 주입] → 장비 id (FR-19)
 //   구독: /factory/state  (std_msgs/String)  IDLE, RUNNING, ERROR, E_STOP → FactoryStateChanged
 //         /factory/stats  (std_msgs/String, JSON) → StatsReceived, CurrentFault (fault 값)
 //   통신 끊김 (FR-17): HeartbeatLink를 자동으로 붙인다. 끊기면 SetRosLost(true) → FactoryState를 E_STOP으로 바꿔
@@ -84,6 +85,7 @@ public class RosBridge : MonoBehaviour
         ros.RegisterPublisher<BoolMsg>(TopicNames.FactoryStart);
         ros.RegisterPublisher<BoolMsg>(TopicNames.EmergencyStop);
         ros.RegisterPublisher<StringMsg>(TopicNames.FaultClear);
+        ros.RegisterPublisher<StringMsg>(TopicNames.InjectFault);
         ros.Subscribe<StringMsg>(TopicNames.FactoryState, OnFactoryState);
         ros.Subscribe<StringMsg>(TopicNames.FactoryStats, OnStats);
         if (GetComponent<HeartbeatLink>() == null) gameObject.AddComponent<HeartbeatLink>();   // FR-17
@@ -225,4 +227,16 @@ public class RosBridge : MonoBehaviour
         ros.Publish(TopicNames.FaultClear, new StringMsg(device));
         Debug.Log($"[Unity→ROS] {TopicNames.FaultClear} = {device}");
     }
+    /// <summary>[고장 주입]: /factory/inject_fault (장비 id) 1번 (FR-19)</summary>
+    public void PublishInjectFault(string device)
+    {
+        if (ros == null || string.IsNullOrEmpty(device))
+        {
+            Debug.LogWarning($"[RosBridge] {TopicNames.InjectFault}을 보내지 못함 (연결 준비 전이거나 장비 id 없음)", this);
+            return;
+        }
+        ros.Publish(TopicNames.InjectFault, new StringMsg(device));
+        Debug.Log($"[Unity→ROS] {TopicNames.InjectFault} = {device}");
+    }
+
 }
