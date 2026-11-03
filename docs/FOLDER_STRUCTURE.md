@@ -65,8 +65,8 @@ DT_Index/
 | 파일 | 상태 | 역할 |
 |---|---|---|
 | `srv/PickPlace.srv` | 있음 | 요청 `box_id`(string, 값은 방석 id `C001`), `pick_pose`, `place_pose` / 응답 `success`, `message`. `/arm_N_pick_place`에 사용. 팔1은 `box_id`를 비워 보내고 Unity가 집은 방석 id를 `message`로 돌려준다 |
-| `msg/DetectEvent.msg` | 삭제 | v3.1에서 사용하지 않음 |
-| `CMakeLists.txt`, `package.xml` | 수정 | DetectEvent 제거 시 함께 수정 |
+| `msg/DetectEvent.msg` | 삭제함 | v3.1에서 사용하지 않음. Unity `RosMessages/`의 `DetectEventMsg.cs`는 `BufferZoneSensor.cs`가 아직 써서 남김 |
+| `CMakeLists.txt`, `package.xml` | 있음 | DetectEvent 제거 반영 |
 
 > 이 패키지를 바꾸면 Unity 쪽 `RosMessages/`도 다시 생성해야 한다 → D에게 알림. 필드 이름 `box_id`는 이미 생성한 C# 클래스를 쓰기 위해 유지한다.
 
@@ -170,6 +170,7 @@ ROS 통신은 **이 폴더에서만** 한다. 다른 스크립트는 여기 이�
 | `TopicNames.cs` | 수정 | 토픽 이름 상수. SRS 4.4 v3.1 표로 교체 (`detect_*`, `box_count`, `pallet_N_reset`, `arm_N_joint_states` 삭제, 새 토픽 추가) | NFR-08 |
 | `CoordConverter.cs` | 있음 | 좌표 변환 **유일한 곳**. `To<FLU>()`, `From<FLU>()` | SRS 4.4 |
 | `HeartbeatLink.cs` | 완료 (11/02) | `/factory/heartbeat_unity` 1초 발행. ROS2에서 3초 동안 아무것도(`/factory/heartbeat_ros`, `/factory/state`, `/factory/stats`) 못 받으면 끊김 → `RosBridge.SetRosLost`로 Unity 설비 E_STOP + 패널 "ROS2 LOST". 복구되면 `/factory/emergency_stop` true 1번 → [Clear]로 해제. 판정은 LateUpdate(에디터 멈춤 오판 방지). RosBridge가 Play 때 자동으로 붙임 (씬 수정 없음) | FR-17, NFR-04 |
+| `ScaleLink.cs` | 있음 | (B) 무게 센서 → `/scale_1_weight` (`{"id","kg"}`, 방석당 1회). 씬의 WeightScanner에 Play 때 자동으로 붙음(씬 수정 없음) | FR-06 |
 | `BinLink.cs`, `ConveyorLink.cs` | 수정 | 적재함·컨베이어 토픽 연결 (`/bin/count`, `/conveyor/cmd`, `/conveyor_1_load`) | FR-03~05 |
 | `ConnectionTest.cs` | 수정 | 세팅 검증용. `/detect_1_event` 발행 부분 삭제 | |
 | `LaneEndLink.cs` | 있음 | 레인 끝(Line/LaneEnd.cs) 1번 칸에 방석이 들어올 때마다 `/conveyor_1_end_ok`·`_ng`로 id 1회. 11/02: ROS와 끊겨 있으면 모아 두었다가 다시 붙으면 보냄(그때도 집는 자리에 있는 방석만), 발행 등록이 사라졌으면 다시 등록. E_STOP → IDLE에서 레인 끝 방석 비움 | FR-09, 16 |
@@ -198,8 +199,8 @@ ROS 통신은 **이 폴더에서만** 한다. 다른 스크립트는 여기 이�
 | `BoxBin.cs` | A | 수정 | 적재함 20개(정상 14·불량 6, 순서 랜덤), 무게는 부록 A.5 범위에서 랜덤(경계 0.05 kg 이내 금지), id 순서 부여, 비면 다시 채움, `/bin/count` | FR-02, 05 |
 | `Conveyor.cs` | A | 수정 | 메인 라인 + 레인 2개, `/conveyor/cmd`로 0.2 m/s 가동·정지(0.5초 이내). 메인·레인별 방석 수를 `/conveyor_1_load`(JSON, 바뀔 때 + 1초) | FR-03, 04 |
 | `LaneEnd.cs` | A | 예정 | 레인 끝 스토퍼와 집는 자리. 방석이 집는 자리에 들어올 때마다 `/conveyor_1_end_ok` 또는 `_ng`로 id 1회, 뒤 방석은 줄 서기 | FR-09 |
-| `WeightScale.cs` | B | 예정 | 무게 센서 구간(Trigger). 방석당 1회 `/scale_1_weight`(`{"id","kg"}`, 소수 둘째 자리) | FR-06 |
-| `Diverter.cs` | B | 예정 | 분기 게이트. `/diverter_1_cmd`를 방석 id별로 기억했다가 갈림길에서 `ok`는 왼쪽(위), `ng`는 오른쪽(아래)으로. 명령 없는 방석은 `ng` + 경고. 레인 이동은 Kinematic | FR-08 |
+| `WeightScanner.cs` | A | 있음 | 무게 센서 구간(Trigger). 방석당 1회 잰 값을 알림 → `ROS/ScaleLink.cs`가 `/scale_1_weight`(`{"id","kg"}`, 소수 둘째 자리)로 발행. 씬 오브젝트 이름은 `WightScanner` | FR-06 |
+| `Diverter.cs` | A | 있음 | 분기 게이트. `/diverter_1_cmd`를 방석 id별로 기억했다가 갈림길에서 `ok`는 왼쪽(위), `ng`는 오른쪽(아래)으로. 명령 없는 방석은 `ng` + 경고. 레인 이동은 Kinematic | FR-08 |
 
 ### 2.4 `_Project/Scripts/AGV/` — [D] · scope `unity-agv`
 AGV1과 파레트 순환 (SRS 부록 A.6). 판단은 하지 않고 명령대로 움직이며 결과만 보고한다.
@@ -271,7 +272,7 @@ AGV1과 파레트 순환 (SRS 부록 A.6). 판단은 하지 않고 명령대로 
 [시작] ControlPanel.cs ──/factory/start──▶ factory_manager_node.py → fsm.py: IDLE→RUNNING
                                           └─/conveyor/cmd(true)──▶ Conveyor.cs
 line_rules.py (투입 조건) ──/arm_1_pick_place──▶ 팔1 + BoxBin.cs (방석 id를 message로 응답)
-WeightScale.cs ──/scale_1_weight──▶ grading.py: ok ──/diverter_1_cmd──▶ Diverter.cs → 정상 레인
+WeightScanner.cs → ScaleLink.cs ──/scale_1_weight──▶ grading.py: ok ──/diverter_1_cmd──▶ Diverter.cs → 정상 레인
 LaneEnd.cs ──/conveyor_1_end_ok──▶ palletizer_1 (+ stacker.py: 호출 조건, k단 높이)
 palletizer_1 ──/arm_2_pick_place──▶ 팔2 → 파레트1 k단 ──/pallet_1_placed──▶ pallet_queue.py ──/pallet_1_count──▶ palletizer_1
 pallet_queue.py: 5개 → 운반 대기열 → agv_dispatch.py ──/agv_1_cmd(P1_DOCK)──▶ agv_1_controller_node.py
