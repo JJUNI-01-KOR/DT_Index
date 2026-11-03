@@ -37,6 +37,7 @@ DT_Index/
         │   ├── Scripts/  ROS/ Arms/ Line/ AGV/ UI/ Common/
         │   ├── Prefabs/  Arm/ Line/ AGV/ UI/
         │   ├── Materials/  Settings/
+        │   ├── Resources/UI/  Play 때 코드로 불러오는 UI 이미지 (FaultWarning.png)
         │   └── Scenes/   Main.unity, Sandbox/
         ├── RosMessages/          # 자동 생성 C# 메시지, 직접 수정 금지
         ├── URDF/                 # Fairino URDF + 메시 (LFS)
@@ -220,6 +221,7 @@ AGV1과 파레트 순환 (SRS 부록 A.6). 판단은 하지 않고 명령대로 
 | `FaultSelector.cs` | D | ⚠ 예정 | [고장 주입] 대상(arm_1~3, conveyor). 유지 여부는 팀 결정(SRS FR-19 Could) | FR-19 |
 | `StatusPanel.cs` | A | 예정 | `/factory/state`, `/factory/stats`만 구독해 표시. 직접 세지 않음. 3초 못 받으면 회색. E_STOP이면 `estop` 원인 표시(비상정지, 통신 끊김, 무게 보고 시간 초과, AGV1 시간 초과, factory_manager 시작) | UI-03, FR-20 |
 | `StatusBanner.cs` | A | 예정 | 공정 상태 색, ERROR(고장 장비)·E_STOP·통신 끊김 경고 배너 | FR-16~18 |
+| `FaultMarker.cs` | B | 있음 | ERROR일 때 고장 장비(fault) 머리 위 경고 아이콘(`Resources/UI/FaultWarning`, 없으면 노란 네모). 아이콘을 클릭하면 [Fix]가 펼쳐지고 3초 누르면 `/factory/fault_clear`. 로봇팔은 그 팔 위, conveyor는 라인 가운데 위. Play 때 자동 생성(씬 수정 없음). 상태 패널 [Fix]와 같은 일 | FR-18 |
 
 ### 2.6 `_Project/Scripts/Common/`
 
