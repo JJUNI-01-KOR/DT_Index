@@ -2129,6 +2129,9 @@ MonoBehaviour:
   clearButton: {fileID: 0}
   startHidden: 1
   autoOpenOnAlarm: 1
+  palletCapacity: 5
+  laneCapacity: 15
+  enableHotkeys: 1
 --- !u!1 &179576825
 GameObject:
   m_ObjectHideFlags: 0
@@ -21984,6 +21987,10 @@ PrefabInstance:
       propertyPath: m_ParentAnchorPosition.y
       value: 0.13800003
       objectReference: {fileID: 0}
+    - target: {fileID: 1001426920657849764, guid: a5eccbc04f4353848b650a888c14cba4, type: 3}
+      propertyPath: m_ParentAnchorPosition.z
+      value: 0.00000047683716
+      objectReference: {fileID: 0}
     - target: {fileID: 2545151743268109104, guid: a5eccbc04f4353848b650a888c14cba4, type: 3}
       propertyPath: m_ParentAnchorPosition.x
       value: 0.000000014901161
@@ -21991,6 +21998,10 @@ PrefabInstance:
     - target: {fileID: 2545151743268109104, guid: a5eccbc04f4353848b650a888c14cba4, type: 3}
       propertyPath: m_ParentAnchorPosition.y
       value: 0.1660099
+      objectReference: {fileID: 0}
+    - target: {fileID: 2545151743268109104, guid: a5eccbc04f4353848b650a888c14cba4, type: 3}
+      propertyPath: m_ParentAnchorPosition.z
+      value: 0.00000047683716
       objectReference: {fileID: 0}
     - target: {fileID: 5409848957241384795, guid: a5eccbc04f4353848b650a888c14cba4, type: 3}
       propertyPath: m_Name
@@ -22003,6 +22014,10 @@ PrefabInstance:
     - target: {fileID: 5930854292203385432, guid: a5eccbc04f4353848b650a888c14cba4, type: 3}
       propertyPath: m_ParentAnchorPosition.y
       value: 1.10134124e-13
+      objectReference: {fileID: 0}
+    - target: {fileID: 5930854292203385432, guid: a5eccbc04f4353848b650a888c14cba4, type: 3}
+      propertyPath: m_ParentAnchorPosition.z
+      value: -0.7159996
       objectReference: {fileID: 0}
     - target: {fileID: 8095965306828118389, guid: a5eccbc04f4353848b650a888c14cba4, type: 3}
       propertyPath: m_ParentAnchorPosition.y
@@ -24402,6 +24417,7 @@ GameObject:
   - component: {fileID: 1682589922}
   - component: {fileID: 1682589921}
   - component: {fileID: 1682589920}
+  - component: {fileID: 1682589926}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -24569,6 +24585,23 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1682589926
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1682589919}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e0757567b975264a8b4a65eebf9e948, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CameraFocus
+  statusPanel: {fileID: 0}
+  moveSec: 0.6
+  fitScale: 2.2
+  distanceRange: {x: 5, y: 14}
+  follow: 1
 --- !u!1 &1690207529
 GameObject:
   m_ObjectHideFlags: 0
