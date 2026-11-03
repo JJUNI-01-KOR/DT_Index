@@ -35,10 +35,11 @@ DT_Index/
     └── Assets/
         ├── _Project/             # 팀이 만든 모든 것
         │   ├── Scripts/  ROS/ Arms/ Line/ AGV/ UI/ Common/
-        │   ├── Prefabs/  Arm/ Line/ AGV/ UI/
-        │   ├── Materials/  Settings/
+        │   ├── Editor/   씬 만들기·배치 메뉴 (에디터 전용)
+        │   ├── Prefabs/  Arm/ Line/ AGV/ Environment/
+        │   ├── Materials/  Factory/  Settings/  Models/
         │   ├── Resources/UI/  Play 때 코드로 불러오는 UI 이미지 (FaultWarning.png)
-        │   └── Scenes/   Main.unity, Sandbox/
+        │   └── Scenes/   Main.unity, Agv_Complete.unity, Sandbox/
         ├── RosMessages/          # 자동 생성 C# 메시지, 직접 수정 금지
         ├── URDF/                 # Fairino URDF + 메시 (LFS)
         ├── Resources/            # ROSConnectionPrefab (각자 IP, skip-worktree)
@@ -191,14 +192,18 @@ ROS 통신은 **이 폴더에서만** 한다. 다른 스크립트는 여기 이�
 | `ArmIkSolver.cs` | 이름 변경 | `ArmIk.cs` |
 
 ### 2.3 `_Project/Scripts/Line/` — A·B · scope `unity-line`
-방석이 적재함에서 레인 끝 집는 자리까지 가는 설비. **무게 센서와 분기 게이트(B)도 이 폴더**에 둔다.
+방석이 적재함에서 레인 끝 집는 자리까지 가는 설비. **무게 센서와 분기 게이트도 이 폴더**에 둔다 (ROS 연결은 `ROS/ScaleLink.cs`(B), `ROS/DiverterLink.cs`).
 
 | 파일 | 담당 | 상태 | 역할 | 관련 |
 |---|---|---|---|---|
-| `Box.cs` | A | 수정 | 방석 데이터: id(`C001`), 무게(kg), 구분(정상·불량), 현재 위치. ⚠ 클래스 이름을 `Cushion`으로 바꿀지 결정 필요 (바꾸면 프리팹 참조 확인) | SRS 6장 |
-| `BoxBin.cs` | A | 수정 | 적재함 20개(정상 14·불량 6, 순서 랜덤), 무게는 부록 A.5 범위에서 랜덤(경계 0.05 kg 이내 금지), id 순서 부여, 비면 다시 채움, `/bin/count` | FR-02, 05 |
-| `Conveyor.cs` | A | 수정 | 메인 라인 + 레인 2개, `/conveyor/cmd`로 0.2 m/s 가동·정지(0.5초 이내). 메인·레인별 방석 수를 `/conveyor_1_load`(JSON, 바뀔 때 + 1초) | FR-03, 04 |
-| `LaneEnd.cs` | A | 예정 | 레인 끝 스토퍼와 집는 자리. 방석이 집는 자리에 들어올 때마다 `/conveyor_1_end_ok` 또는 `_ng`로 id 1회, 뒤 방석은 줄 서기 | FR-09 |
+| `Cushion.cs` | A | 있음 | 방석 데이터: id(`C001`), 무게(kg), 구분(정상·불량), 현재 위치 (`Box.cs`에서 이름 바꿈) | SRS 6장 |
+| `CushionBin.cs` | A | 있음 | 적재함 20개(정상 14·불량 6, 순서 랜덤), 무게는 부록 A.5 범위에서 랜덤(경계 0.05 kg 이내 금지), id 순서 부여, 비면 다시 채움, `/bin/count` | FR-02, 05 |
+| `Conveyor.cs` | A | 있음 | 메인 라인 + 레인 2개, `/conveyor/cmd`로 0.2 m/s 가동·정지(0.5초 이내). 메인·레인별 방석 수를 `/conveyor_1_load`(JSON, 바뀔 때 + 1초) | FR-03, 04 |
+| `LaneEnd.cs` | A | 있음 | 레인 끝 스토퍼와 집는 자리. 방석이 집는 자리에 들어올 때마다 `/conveyor_1_end_ok` 또는 `_ng`로 id 1회, 뒤 방석은 줄 서기 | FR-09 |
+| `ConveyorLoad.cs` | A | 있음 | 메인·정상 레인·불량 레인 위 방석 수 (ROS 모름, 발행은 `ROS/ConveyorLink.cs`) | FR-04 |
+| `CornerTurn.cs` | A | 있음 | 코너 칸에서 방석을 꺾어 보냄 (중앙까지 직진 후 회전) | FR-03 |
+| `BeltFloorMesh.cs` | A | 있음 | 칸 경계 걸림(ghost collision) 없는 하나짜리 벨트 바닥. Play 때 `Conveyor` 루트에 자동으로 붙음 | FR-03 |
+| `ConveyorGroup.cs`, `ConveyorCellDir.cs` | A | 있음 | 꺾이는 라인의 직선 구간 묶음 가동·정지, 칸별 흐름 방향 지정(선택) | FR-03 |
 | `WeightScanner.cs` | A | 있음 | 무게 센서 구간(Trigger). 방석당 1회 잰 값을 알림 → `ROS/ScaleLink.cs`가 `/scale_1_weight`(`{"id","kg"}`, 소수 둘째 자리)로 발행. 씬 오브젝트 이름은 `WightScanner` | FR-06 |
 | `Diverter.cs` | A | 있음 | 분기 게이트. `/diverter_1_cmd`를 방석 id별로 기억했다가 갈림길에서 `ok`는 왼쪽(위), `ng`는 오른쪽(아래)으로. 명령 없는 방석은 `ng` + 경고. 레인 이동은 Kinematic | FR-08 |
 
@@ -221,7 +226,10 @@ AGV1과 파레트 순환 (SRS 부록 A.6). 판단은 하지 않고 명령대로 
 | `HoldButton.cs` | D | 있음 | 길게 누르기 (기본 3초). 중간에 떼거나 버튼이 꺼지면 처음부터. [Fix]에 붙음 | FR-18 |
 | `StatusPanel.cs` | A | 수정 | `/factory/state`, `/factory/stats`만 구독해 표시. 직접 세지 않음. 3초 못 받으면 회색. E_STOP이면 `estop` 원인 표시(비상정지, 통신 끊김, 무게 보고 시간 초과, AGV1 시간 초과, factory_manager 시작). 11/03 B: 제어 버튼을 패널에서 빼고(→ `ControlBar.cs`) 패널 크기를 `panelSize`(400×450)로 고정, 네 탭 모두 같음. 오른쪽 위 [STATUS] 메뉴 버튼(열기/닫기, Tab과 같음, 패널이 열리면 패널 왼쪽 위로) | UI-03, FR-20 |
 | `ControlBar.cs` | B | 있음 | 제어 버튼 8개를 오른쪽 아래에 늘 보이게 모음(ControlPanel의 연결 상태 글자는 숨김, 상태 패널에 같은 내용이 나옴). Play 때 Title Panel 폭 600, 상태 배너 위쪽 정가운데로(씬 값은 그대로). 윗줄 [고장 주입] Arm1·Arm2·Arm3·Line(회색, RUNNING·연결 정상일 때만, `/factory/inject_fault`, Line = `conveyor`), 가운데 [Fix][Emergency](주황·빨강), 아랫줄 [Start][Clear](초록·파랑). 씬 버튼을 옮기고 색만 바꿈(동작은 ControlPanel 그대로). Play 때 자동으로 붙음(씬 수정 없음). 따로 두려던 `FaultSelector.cs`는 만들지 않음 | UI-02, FR-01, 16, 18, 19 |
-| `StatusBanner.cs` | A | 예정 | 공정 상태 색, ERROR(고장 장비)·E_STOP·통신 끊김 경고 배너 | FR-16~18 |
+| `StatusBanner.cs` | A | 있음 | 공정 상태 색, ERROR(고장 장비)·E_STOP·통신 끊김 경고 배너 | FR-16~18 |
+| `CameraFocus.cs` | A | 있음 | 로봇팔·AGV를 클릭하면(상태 패널 열림) 카메라가 그쪽으로 다가감, 닫으면 원래 시점 (11/03) | UI-03 |
+| `CameraZoomPitch.cs` | A | 있음 | 휠로 당기면 카메라 각도가 낮아지고 멀리 빼면 높아짐. `Editor/FactoryCameraFit`가 Main Camera에 붙임 (11/03) | UI-01 |
+| `WallStatusBoard.cs` | A | 있음 | 공장 북쪽 벽 전광판: 상태 패널이 받은 `/factory/stats`를 크게 표시 (직접 세지 않음). `Editor/FactoryProps`가 만들고 붙임 (11/03) | FR-20 |
 | `FaultMarker.cs` | B | 있음 | ERROR일 때 고장 장비(fault) 머리 위 경고 아이콘(`Resources/UI/FaultWarning`, 없으면 노란 네모). 아이콘을 클릭하면 [Fix]가 펼쳐지고 3초 누르면 `/factory/fault_clear`. 로봇팔은 그 팔 위, conveyor는 라인 가운데 위. Play 때 자동 생성(씬 수정 없음). 상태 패널 [Fix]와 같은 일 | FR-18 |
 
 ### 2.6 `_Project/Scripts/Common/`
@@ -230,14 +238,32 @@ AGV1과 파레트 순환 (SRS 부록 A.6). 판단은 하지 않고 명령대로 
 |---|---|---|---|
 | `LineSettings.cs` | A | 예정 | ScriptableObject: 적재함 수량·비율, 방석 무게 분포와 높이, 컨베이어 속도, 최종 구역 삭제 시간, 로봇팔 동작 제한 시간 15초 (NFR-09, Inspector) |
 | `FactoryState.cs` | D | 예정 | `/factory/state` 문자열 ↔ enum (IDLE, RUNNING, ERROR, E_STOP) |
+| `FactoryWallCutaway.cs` | A | 있음 | 카메라 쪽 공장 벽을 숨기고, 밖에서 내려다볼 땐 지붕도 숨김 (Play 때). `Editor/FactoryShellBuilder`가 붙임 (11/03) |
 | `BufferZoneSensor.cs` | — | 있음 | v2.2 대기 칸용이지만 `Main.unity`가 `BufferZoneSensor.prefab`을 쓰고 있어 남김. `LaneEnd.cs`가 생기면 씬에서 빼고 지운다 |
+
+### 2.6.1 `_Project/Editor/` — 에디터 메뉴 (Play와 상관없음, 빌드에 안 들어감)
+
+| 파일 | 담당 | 메뉴 | 하는 일 |
+|---|---|---|---|
+| `FactoryShellBuilder.cs` | A | INDEX > Factory > Build All · Build Shell + Props · Remove Shell | Area 크기에 맞춘 공장 건물(벽·기둥·지붕·조명·셔터) → `Prefabs/Environment/FactoryShell.prefab`. 소품은 `FactoryProps.cs`가 같이 만듦 |
+| `FactoryProps.cs` | A | (Build Shell + Props가 부름) | 바닥 표시(AGV 실제 경로, 로봇 구역, 통로), 선반·지게차·소화기·전광판 등 |
+| `FinalZoneDecorBuilder.cs` | A | INDEX > Factory > Build Final Zone Decor · Remove | 최종 구역 바닥·표지·신호등 → `Prefabs/Environment/FinalZoneDecor.prefab` |
+| `FactoryCameraFit.cs` | A | INDEX > Factory > Fit Camera | 라인 전체가 보이게 기본 카메라 맞춤, `CameraZoomPitch` 붙임 |
+| `HudPlayLayout.cs` | A | INDEX > UI > Apply Play Layout to Scene | Play 때 `ControlBar`가 하는 버튼 배치·색, Title 폭을 씬에 미리 저장 (Play 전·후 화면을 같게) |
+| `ArmSetupTool.cs` | A | Tools/INDEX/로봇팔1 만들기 | 로봇팔1 배치 |
+| `BinSetupTool.cs` | A | Tools/INDEX/적재함 만들기 | 방석 프리팹 크기, 적재함 |
+| `ConveyorSeamTool.cs` | A | Tools/INDEX/컨베이어 이음새 검사·높이 맞추기 | 컨베이어 칸 높이 검사 |
+| `PalletConveyorBuilder.cs`, `PalletVisualBuilder.cs` | A | INDEX > Build Pallet Conveyors · Build Pallet Visual | 파레트 자리 롤러 컨베이어, 나무 파레트 겉모양 |
+| `CushionVisualBuilder.cs` | D | INDEX > Build Cushion Visual | 방석 겉모양 (2.7 Models/Cushion) |
 
 ### 2.7 그 밖의 Unity 폴더
 
 | 폴더 | 내용 | 규칙 |
 |---|---|---|
 | `_Project/Prefabs/Arm/` | `Arm_Fairino` (팔 3대 공통) | 기능은 프리팹 안에서 완성 → 씬 충돌 방지 |
-| `_Project/Prefabs/Line/` | `BoxBin`, `Box_Normal`, `Box_Oversize`(⚠ 방석 정상·불량으로 교체), `Conveyor`, `WeightScale`, `Diverter`, `LaneEnd` | |
+| `_Project/Prefabs/Line/` | `Cushion`, `Cushion 2`, `CushionVisual` | 컨베이어·적재함·레인 끝은 `Main.unity`에 직접 배치 (11/03 A: 안 쓰던 `Conveyor.prefab` 삭제) |
+| `_Project/Prefabs/Environment/` | `FactoryShell`, `FinalZoneDecor` (A) | 직접 고치지 않는다. `Editor/FactoryShellBuilder`·`FinalZoneDecorBuilder` 메뉴로 다시 만든다 |
+| `_Project/Materials/Factory/` | 공장 건물·소품·최종 구역 재질 (A) | 메뉴를 다시 누르면 코드에 적힌 색으로 덮어쓴다. 색을 바꾸려면 Builder 코드의 값도 같이 고친다 |
 | `_Project/Prefabs/AGV/` | `AGV_1`, `Pallet`, `PalletSlot`, `SpareRail`, `FinalZone` | |
 | `_Project/Prefabs/UI/` | `ControlPanel`, `StatusPanel` | |
 | `_Project/Settings/` | `LineSettings.asset`, 물리 재질, URP 설정 | |

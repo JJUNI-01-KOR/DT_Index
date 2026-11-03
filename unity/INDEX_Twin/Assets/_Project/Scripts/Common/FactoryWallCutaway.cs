@@ -1,5 +1,5 @@
-// FactoryWallCutaway.cs : 카메라 쪽 공장 벽을 숨긴다 (11/03 A). 담당 A · scope unity-env
-// FactoryShellBuilder(메뉴 INDEX > Build Factory Shell)가 FactoryShell 루트에 붙이고 벽 4개를 채운다. 손으로 붙일 일 없음.
+// FactoryWallCutaway.cs : 카메라 쪽 공장 벽을 숨긴다 (11/03 A). 담당 A · scope scene
+// FactoryShellBuilder(메뉴 INDEX > Factory > Build All)가 FactoryShell 루트에 붙이고 벽 4개를 채운다. 손으로 붙일 일 없음.
 //
 // 카메라가 공장 밖 위쪽에서 안을 내려다보므로, 카메라가 있는 쪽 벽(벽의 바깥 방향에 카메라가 있음)을 숨겨
 // 라인이 가리지 않게 한다. Q/E로 카메라를 돌리면 숨는 벽도 따라 바뀐다.
