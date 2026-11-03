@@ -180,6 +180,19 @@ class FactoryManager(Node):
                 self.retry_pub.publish(String(data=device))
         self.pick_failed.clear()
         
+
+    def on_inject_fault(self, msg):
+        """[고장 주입] (FR-19, Could). RUNNING에서만 받는다. 집기 실패가 아니므로 다시 보내는 요청은 없다."""
+        device = msg.data.strip()
+        if device not in ('arm_1', 'arm_2', 'arm_3', 'conveyor'):
+            self.get_logger().warn(f'고장 주입 장비 id가 잘못되어 무시: {msg.data}')
+            return
+        if self.fsm.state != RUNNING:
+            self.get_logger().info(f'RUNNING이 아니라 고장 주입 무시: {device} ({self.fsm.state})')
+            return
+        self.apply(f'고장 주입 {device}', self.fsm.on_fault, device)
+
+
     def on_fault(self, msg):
         """palletizer의 집기 실패 보고 {"device": "arm_2", "reason": "pick_failed"} (FR-18)."""
         device = parse_fault(msg.data)
