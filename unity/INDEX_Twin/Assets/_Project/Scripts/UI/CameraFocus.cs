@@ -2,6 +2,8 @@
 // StatusPanel에서 로봇팔·AGV를 클릭해 패널이 열리면, 카메라가 그 장비 쪽으로 부드럽게 당겨진다.
 // 패널을 닫으면([X] 또는 같은 장비 다시 클릭) 클릭 전 시점으로 돌아간다.
 //   - AGV처럼 움직이는 장비는 따라간다. WASD로 직접 움직이면 따라가기를 멈춘다.
+//     따라가는 기준은 장비 루트 위치 + 클릭 때 잰 중심 오프셋 (11/03 A 테스트: 경계 상자 중심을 매 프레임 쓰면
+//     로봇팔이 움직이거나 방석을 들 때마다 초점이 같이 흔들렸다. 팔 루트는 안 움직이니 이제 고정)
 //   - 알람으로 저절로 열린 패널(장비 없음)은 카메라를 건드리지 않는다.
 //   - 마우스 휠 줌, Q/E 회전은 줌 된 상태에서도 그대로 된다.
 // 카메라 조작은 Main Camera의 DemoCamera(Conveyor System 에셋)가 한다. 그 파일은 고치지 않는다.
@@ -33,6 +35,7 @@ public class CameraFocus : MonoBehaviour
     private FieldInfo focusField, targetDistField, minDistField, maxDistField;
 
     private Component target;
+    private Vector3 targetOffset;     // 장비 루트 → 클릭 때 경계 상자 중심
     private bool hasSaved;
     private Vector3 savedFocus;
     private float savedDistance;
@@ -86,6 +89,7 @@ public class CameraFocus : MonoBehaviour
             }
             target = device;
             Bounds b = DeviceBounds(device);
+            targetOffset = b.center - device.transform.position;
             float dist = Mathf.Clamp(b.size.magnitude * fitScale, distanceRange.x, distanceRange.y);
             MoveTo(b.center, dist, startFollow: true);
         }
@@ -102,8 +106,10 @@ public class CameraFocus : MonoBehaviour
         if (!following || moving != null || target == null || demoCamera == null) return;
         // WASD로 직접 움직였으면 따라가기 멈춤
         if ((GetFocus() - lastFocusSet).sqrMagnitude > 1e-6f) { following = false; return; }
-        SetFocus(DeviceBounds(target).center);
+        SetFocus(TargetCenter());
     }
+
+    Vector3 TargetCenter() => target.transform.position + targetOffset;
 
     void MoveTo(Vector3 focus, float distance, bool startFollow)
     {
@@ -120,7 +126,7 @@ public class CameraFocus : MonoBehaviour
         {
             float k = Mathf.SmoothStep(0f, 1f, t / moveSec);
             // 움직이는 장비면 도착 지점을 매 프레임 다시 잡는다
-            if (startFollow && follow && target != null) toFocus = DeviceBounds(target).center;
+            if (startFollow && follow && target != null) toFocus = TargetCenter();
             SetFocus(Vector3.Lerp(fromFocus, toFocus, k));
             SetTargetDistance(Mathf.Lerp(fromDist, toDist, k));
             yield return null;
