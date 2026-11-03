@@ -251,6 +251,7 @@ public class ArmPickPlace : MonoBehaviour
         string failed = "pick_above";
         float[] qPa = null, qP = null, qPo = null, qLa = null, qL = null;
         float[] qPr = null, qPt = null, qPf = null;   // 11/03 A: 옆으로 집기 뒤 물러나기·세운 채 나르기·눕혀 정렬 (위에서 집기는 null)
+        string lastSideFail = "-";
         bool planned = false;
 
         if (side)
@@ -280,6 +281,7 @@ public class ArmPickPlace : MonoBehaviour
                         foreach (float k in RetreatScales)
                         {
                             float[] from = qPo;
+                            if (failed.StartsWith("side_")) lastSideFail = failed;
                             qPr = qPt = qPf = null;
                             if (k > 0f)
                             {
@@ -287,31 +289,39 @@ public class ArmPickPlace : MonoBehaviour
                                 strictWrist = pass == 0;
                                 if (!PlanRot(retreat, rotSide, qPo, out qPr)) { failed = "side_retreat"; continue; }
 
-                                // 벨트 위 도착점(눕혀 정렬된 자세)과, 그쪽으로 sideTurnStart 만큼 간 중간점(아직 세운 채)
+                                // 벨트 위 도착점(눕혀 정렬된 자세)을 먼저 구하고, 그걸 시드로 써서 중간점(세운 채)을 구한다.
+                                // 11/03 A 테스트: 중간점 IK가 칸에 따라 수렴 못 해서 예전 동선으로 빠짐 → 비율·방향 후보를 늘리고 시드 추가
                                 Vector3 over = placeAbove + up * (sideCarryUp * k);
-                                Vector3 mid = Vector3.Lerp(retreat, over, sideTurnStart);
-                                mid.y = Mathf.Max(retreat.y, over.y);
-                                Vector3 outward = mid - transform.position; outward.y = 0f;
+                                strictWrist = false;
+                                if (!Plan(over, placeYaw, qPr, out qPf)) { failed = "side_turn"; continue; }
                                 bool carried = false;
-                                if (outward.sqrMagnitude > 1e-4f)
+                                foreach (float t in TurnStarts())
                                 {
-                                    // 공구가 팔 바깥쪽(베이스에서 먼 쪽)을 봄 → 방석은 세운 채
-                                    var rotCarry = Quaternion.FromToRotation(Vector3.down, outward.normalized)
-                                                   * Quaternion.LookRotation(Quaternion.Euler(0f, roll, 0f) * Vector3.forward, Vector3.down);
-                                    strictWrist = pass == 0;
-                                    carried = PlanRot(mid, rotCarry, qPr, out qPt);
+                                    Vector3 mid = Vector3.Lerp(retreat, over, t);
+                                    mid.y = Mathf.Max(retreat.y, over.y);
+                                    Vector3 outward = mid - transform.position; outward.y = 0f;
+                                    if (outward.sqrMagnitude > 1e-4f)
+                                    {
+                                        // 공구가 팔 바깥쪽(베이스에서 먼 쪽)을 봄 → 방석은 세운 채. 공구 축 둘레 회전 4가지
+                                        var toOut = Quaternion.FromToRotation(Vector3.down, outward.normalized);
+                                        for (int r = 0; r < 4 && !carried; r++)
+                                        {
+                                            var rotCarry = toOut * Quaternion.LookRotation(Quaternion.Euler(0f, roll + 90f * r, 0f) * Vector3.forward, Vector3.down);
+                                            carried = PlanRot(mid, rotCarry, qPr, out qPt, qPf);
+                                        }
+                                    }
+                                    if (!carried) carried = PlanRot(mid, rotSide, qPr, out qPt, qPf);   // 집을 때 방향 그대로라도
+                                    if (carried) break;
                                 }
-                                if (!carried) { strictWrist = false; carried = PlanRot(mid, rotSide, qPr, out qPt); }   // 방향 그대로라도
                                 if (!carried) { failed = "side_carry"; continue; }
-                                strictWrist = false;   // 남은 길에서 손목을 돌려 눕히고 벨트 방향으로 맞춘다
-                                if (!Plan(over, placeYaw, qPt, out qPf)) { failed = "side_turn"; continue; }
+                                Unwrap(qPf, qPt);   // 중간점 → 도착점을 짧게 돌도록
                                 from = qPf;
                             }
                             strictWrist = k > 0f && pass == 0;   // 놓기 위: 이미 정렬됨 → 내려가기만 (k = 0이면 예전처럼 빼낸 자리에서 바로)
                             if (!Plan(placeAbove, placeYaw, from, out qLa)) { failed = "place_above"; continue; }
                             strictWrist = pass == 0;
                             if (!Plan(placeTop, placeYaw, qLa, out qL)) { failed = "place"; continue; }
-                            if (k <= 0f) Debug.LogWarning($"{Tag} 물러나기·나르기 자리에 팔이 닿지 않아 예전 동선으로 감 (랙을 스칠 수 있음)", this);
+                            if (k <= 0f) Debug.LogWarning($"{Tag} 물러나기·나르기 자리에 팔이 닿지 않아 예전 동선으로 감 (랙을 스칠 수 있음, 마지막 실패: {lastSideFail})", this);
                             else if (k < 1f) Debug.Log($"{Tag} 물러나기·나르기 거리를 {k * 100f:F0}%로 줄여서 감", this);
                             planned = true;
                             break;
@@ -522,10 +532,12 @@ public class ArmPickPlace : MonoBehaviour
         PlanRot(toolPos, Quaternion.LookRotation(Quaternion.Euler(0f, yawDeg, 0f) * Vector3.forward, Vector3.down), prev, out q);
 
     /// <summary>공구 위치·방향을 직접 정한 자세 (11/02 A: 옆으로 집기)</summary>
-    bool PlanRot(Vector3 toolPos, Quaternion rot, float[] prev, out float[] q)
+    bool PlanRot(Vector3 toolPos, Quaternion rot, float[] prev, out float[] q, float[] extraSeed = null)
     {
         q = new float[rig.Joints.Length];
-        var seeds = new[] { prev, rig.HomeRad, ElbowUpA, ElbowUpB };
+        var seeds = extraSeed != null
+            ? new[] { prev, extraSeed, rig.HomeRad, ElbowUpA, ElbowUpB }
+            : new[] { prev, rig.HomeRad, ElbowUpA, ElbowUpB };
         if (!Ik.Solve(toolPos, rot, seeds, q, out _, out _)) return false;
         Unwrap(q, prev);   // 같은 자세라도 직전 관절값에서 가장 짧게 도는 각도로
         if (strictWrist)
@@ -542,6 +554,13 @@ public class ArmPickPlace : MonoBehaviour
     }
 
     /// <summary>baseYaw + 90°×k (k = 0~3)를 refYaw에 가까운 순서로</summary>
+    /// <summary>세운 채 나르는 비율 후보 (11/03 A): 설정값 먼저, 그다음 앞뒤로</summary>
+    float[] TurnStarts()
+    {
+        float t = sideTurnStart;
+        return new[] { t, Mathf.Clamp(t * 0.6f, 0.1f, 0.9f), Mathf.Clamp(t * 1.4f, 0.1f, 0.9f), 0.15f };
+    }
+
     static float[] Candidates90(float baseYaw, float refYaw)
     {
         var c = new float[4];
