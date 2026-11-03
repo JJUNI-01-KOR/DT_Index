@@ -1,4 +1,4 @@
-// FactoryCameraFit.cs : 기본 카메라를 라인 전체(컨베이어·로봇팔 3대·AGV 길)가 다 보이게 맞춘다 (11/03 A). 담당 A · scope unity-env
+// FactoryCameraFit.cs : 기본 카메라를 라인 전체(컨베이어·로봇팔 3대·AGV 길)가 다 보이게 맞춘다 (11/03 A). 담당 A · scope scene
 // 메뉴 INDEX > Factory > Fit Camera
 //
 // - Main Camera의 DemoCamera(Conveyor System 에셋) 값만 바꾼다: Focus, Distance, Pitch, Yaw, 거리·각도 한계, 이동 한계, 휠 단계.

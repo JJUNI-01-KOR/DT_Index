@@ -1,4 +1,4 @@
-// FactoryShellBuilder.cs : Area 크기에 맞춰 공장 건물(벽·기둥·지붕 트러스·조명·셔터 등)을 만든다. 담당 A · scope unity-env (11/03 A)
+// FactoryShellBuilder.cs : Area 크기에 맞춰 공장 건물(벽·기둥·지붕 트러스·조명·셔터 등)을 만든다. 담당 A · scope scene (11/03 A)
 // 메뉴 INDEX > Factory > Build Shell + Props : 만들기 (다시 누르면 지우고 새로 만듦)
 //      INDEX > Factory > Remove Shell          : 지우기
 //

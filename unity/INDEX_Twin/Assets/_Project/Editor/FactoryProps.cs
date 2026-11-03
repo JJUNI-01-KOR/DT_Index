@@ -1,9 +1,12 @@
-// FactoryProps.cs : 공장 부가 소품 (11/03 A). 담당 A · scope unity-env
+// FactoryProps.cs : 공장 부가 소품 (11/03 A). 담당 A · scope scene
 // FactoryShellBuilder.Build()가 부른다 (메뉴 INDEX > Factory > Build Shell + Props). 혼자 부르는 메뉴는 없다.
 //
 // 놓는 곳: Area 바깥 ~ 벽 사이 통로(Margin 3.5 m)와 벽면. 라인·AGV 길(Area 안)에는 아무것도 놓지 않는다.
 //   벽 소품(현수막·표지판·시계·환풍기·케이블 트레이·분전반·소화전함)은 그 벽 그룹 아래 → 카메라 쪽 벽과 같이 숨는다.
 //   바닥 소품(보행 통로·지게차·빈 파레트 더미·박스 파레트·작업대·공구함·분리수거함·콘·제어실·하역 구역)은 Props 그룹.
+// 11/03 A (2차): 라인 안쪽 바닥 표시를 더했다 (바닥 그림·납작한 것만, AGV 길은 막지 않음)
+//   AGV 주행선(주황 점선 + AGV 글자), AGV 대기 칸(HOME) + 충전기, 로봇팔 작업 구역 경고선
+//   북쪽 벽 실시간 상태 전광판 (WallStatusBoard가 /factory/stats를 상태 패널과 같이 보여 줌)
 // 콜라이더 없음, 그림자 끔 (FactoryShellBuilder가 마지막에 일괄 처리).
 // 글자는 TextMeshPro 3D (기본 글꼴에 한글이 없어 영어).
 
@@ -89,6 +92,10 @@ public static class FactoryProps
         CableTray(wN, 'N', x0 + 0.5f, x1 - 0.5f, 4.2f);
         for (int i = 0; i < xs.Count - 1; i += 2) Fan(wN, Face('N', Mid(xs, i), SB.WallH - 2.6f, 0.1f));
         FireHose(wN, Face('N', Mid(xs, xs.Count - 2) - 1.2f, 1.1f, 0.25f));
+        StatusBoard(wN, Face('N', Mid(xs, 4), 3.0f, 1.0f));   // 케이블 트레이(4.2) 아래, 트레이보다 앞
+
+        // ── 라인 안쪽 바닥 표시 (11/03 A 2차) ──
+        FloorMarks(SB.Group(props, "FloorMarks"));
 
         // ── 벽: 동 ──
         Banner(wE, Face('E', cz + 2f, bannerY - 0.6f, front), new Vector2(9f, 1.3f), "LINE A  -  CUSHION SORTING", mBanner, Color.white);
@@ -170,12 +177,13 @@ public static class FactoryProps
         }
     }
 
-    static void Outline(GameObject parent, Rect r, float w, Material m)
+    static void Outline(GameObject parent, Rect r, float w, Material m, float baseY = 0f)
     {
-        SB.Box(parent, "Edge", new Vector3(r.center.x, 0.005f, r.yMin), new Vector3(r.width + w, 0.005f, w), m);
-        SB.Box(parent, "Edge", new Vector3(r.center.x, 0.005f, r.yMax), new Vector3(r.width + w, 0.005f, w), m);
-        SB.Box(parent, "Edge", new Vector3(r.xMin, 0.005f, r.center.y), new Vector3(w, 0.005f, r.height), m);
-        SB.Box(parent, "Edge", new Vector3(r.xMax, 0.005f, r.center.y), new Vector3(w, 0.005f, r.height), m);
+        float y = baseY + 0.005f;
+        SB.Box(parent, "Edge", new Vector3(r.center.x, y, r.yMin), new Vector3(r.width + w, 0.005f, w), m);
+        SB.Box(parent, "Edge", new Vector3(r.center.x, y, r.yMax), new Vector3(r.width + w, 0.005f, w), m);
+        SB.Box(parent, "Edge", new Vector3(r.xMin, y, r.center.y), new Vector3(w, 0.005f, r.height), m);
+        SB.Box(parent, "Edge", new Vector3(r.xMax, y, r.center.y), new Vector3(w, 0.005f, r.height), m);
     }
 
     /// <summary>바닥에 눕힌 글자. yaw 0 = 남쪽(기본 카메라)에서 읽힘</summary>
@@ -450,6 +458,147 @@ public static class FactoryProps
         // 간판은 지붕 위 북쪽 끝에 남쪽(기본 카메라)을 보고 선다
         SB.Box(g, "SignBack", new Vector3(r.center.x, h + 0.42f, r.yMax - 0.05f), new Vector3(r.width * 0.95f, 0.45f, 0.04f), mBanner);
         sign.transform.SetPositionAndRotation(new Vector3(r.center.x, h + 0.42f, r.yMax - 0.075f), Quaternion.identity);
+    }
+
+    // ── 11/03 A 2차: 바닥 표시·전광판 ──
+
+    // AGV 정지 지점 (Unity 좌표). dt_bringup/config/agv_waypoints.yaml 주석의 Unity 값과 같다. HOME은 씬의 AGV1 위치를 쓴다
+    static readonly Vector2 AgvTurn = new Vector2(-19f, -0.75f);
+    static readonly Vector2 AgvP1 = new Vector2(-19f, -6.5f);
+    static readonly Vector2 AgvP2 = new Vector2(-19f, 5.4f);
+    static readonly Vector2 AgvFinal = new Vector2(-23f, -0.75f);
+
+    // 라인 안쪽 바닥(Environment/Area의 Work Area 판, 두께 0.01)의 윗면. 그 위에 그려야 보인다
+    const float AreaTop = 0.011f;
+
+    static void FloorMarks(GameObject g)
+    {
+        var mLane = SB.Mat("Factory_AgvLane", new Color(1f, 0.55f, 0.08f), 0.2f, 0f);
+        var mWhite2 = mWhite;
+
+        // AGV 대기 위치: 씬의 AGV1 (AgvWaypointDriver) 위치. 없으면 yaml HOME
+        var agv = Object.FindFirstObjectByType<AgvWaypointDriver>(FindObjectsInactive.Include);
+        Vector2 home = agv != null ? new Vector2(agv.transform.position.x, agv.transform.position.z) : new Vector2(-16.5f, -0.75f);
+
+        // 주행선: FINAL ↔ HOME (가로), P1_DOCK ↔ P2_DOCK (세로, 가운데 줄 x -19)
+        // 11/03 A: agv_waypoints.yaml + dt_agv/route.py 실제 경로대로 (일방통행 루프)
+        //   출동(빈 AGV, 주황): HOME → 경유점(-19, -0.75) → P1_DOCK 또는 P2_DOCK
+        //   견인(파레트 끌고, 파랑): 도킹 위치 → FINAL 대각선 직선 (to_final 경유점 없음)
+        //   복귀(초록): FINAL → HOME 직선. 출동선과 같은 줄이라 남쪽으로 0.35 m 비켜 그린다
+        var mTow = SB.Mat("Factory_AgvTow", new Color(0.20f, 0.55f, 1.0f), 0.2f, 0f);
+        var mBack = SB.Mat("Factory_AgvReturn", new Color(0.25f, 0.85f, 0.40f), 0.2f, 0f);
+        Vector2 off = new Vector2(0f, -0.35f);
+        Lane(g, home, AgvTurn, mLane);
+        Lane(g, AgvTurn, AgvP1, mLane);
+        Lane(g, AgvTurn, AgvP2, mLane);
+        Lane(g, AgvP1, AgvFinal, mTow);
+        Lane(g, AgvP2, AgvFinal, mTow);
+        Lane(g, AgvFinal + off, home + off, mBack);
+
+        Color cOut = mLane.GetColor("_BaseColor"), cTow = mTow.GetColor("_BaseColor"), cBack = mBack.GetColor("_BaseColor");
+        FactoryProps.FloorText(g, "TO DOCK", new Vector3(AgvTurn.x + 0.55f, AreaTop + 0.012f, (AgvTurn.y + AgvP2.y) * 0.5f), new Vector2(1.4f, 0.28f), -90f, cOut);
+        FactoryProps.FloorText(g, "TO DOCK", new Vector3(AgvTurn.x + 0.55f, AreaTop + 0.012f, (AgvTurn.y + AgvP1.y) * 0.5f), new Vector2(1.4f, 0.28f), -90f, cOut);
+        Vector2 t1 = Vector2.Lerp(AgvP1, AgvFinal, 0.5f), t2 = Vector2.Lerp(AgvP2, AgvFinal, 0.5f);
+        FactoryProps.FloorText(g, "TOWING", new Vector3(t1.x - 0.6f, AreaTop + 0.012f, t1.y), new Vector2(1.2f, 0.28f), 0f, cTow);
+        FactoryProps.FloorText(g, "TOWING", new Vector3(t2.x - 0.6f, AreaTop + 0.012f, t2.y), new Vector2(1.2f, 0.28f), 0f, cTow);
+        FactoryProps.FloorText(g, "RETURN", new Vector3((AgvFinal.x + AgvTurn.x) * 0.5f, AreaTop + 0.012f, AgvFinal.y - 0.75f), new Vector2(1.2f, 0.28f), 0f, cBack);
+
+        // HOME 칸 + 충전기 (주행선 북쪽 옆, 길 위가 아님)
+        Outline(g, new Rect(home.x - 0.7f, home.y - 0.6f, 1.4f, 1.2f), 0.06f, mWhite2, AreaTop);
+        FactoryProps.FloorText(g, "HOME", new Vector3(home.x, AreaTop + 0.012f, home.y - 0.85f), new Vector2(1.0f, 0.28f), 0f, Color.white);
+        var ch = Sub(g, "Charger", new Vector3(home.x, 0f, home.y + 1.05f), Quaternion.identity);
+        SB.LocalBox(ch, "Body", new Vector3(0f, 0.45f, 0f), new Vector3(0.6f, 0.9f, 0.3f), mPanelGray);
+        SB.LocalBox(ch, "Face", new Vector3(0f, 0.55f, -0.155f), new Vector3(0.45f, 0.5f, 0.01f), mBanner);
+        SB.LocalBox(ch, "Led", new Vector3(0f, 0.72f, -0.165f), new Vector3(0.25f, 0.05f, 0.01f), mLedGreen);
+        SB.LocalBox(ch, "Bolt", new Vector3(0f, 0.5f, -0.165f), new Vector3(0.08f, 0.2f, 0.01f), SB.mDoorFrame);
+        SB.LocalBox(ch, "Base", new Vector3(0f, 0.02f, 0f), new Vector3(0.7f, 0.04f, 0.4f), SB.mCap);
+        SB.LocalBox(ch, "Contact", new Vector3(0f, 0.15f, -0.3f), new Vector3(0.3f, 0.08f, 0.3f), SB.mDoorFrame);
+
+        // 로봇팔 작업 구역: 팔 베이스 둘레 노랑·검정 경고선 (바닥 그림만)
+        foreach (var arm in Object.FindObjectsByType<ArmRig>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+        {
+            Vector3 a = arm.transform.position;
+            HazardRect(g, new Rect(a.x - 1.5f, a.z - 1.5f, 3f, 3f), 0.12f);
+            FactoryProps.FloorText(g, "ROBOT ZONE", new Vector3(a.x, AreaTop + 0.012f, a.z - 1.75f), new Vector2(1.6f, 0.26f), 0f, SB.mDoorFrame.GetColor("_BaseColor"));
+        }
+    }
+
+    /// <summary>점선 + 진행 방향 꺾쇠 (a → b)</summary>
+    static void Lane(GameObject g, Vector2 a, Vector2 b, Material m)
+    {
+        Dashed(g, a, b, m);
+        Vector2 d = b - a;
+        float len = d.magnitude;
+        if (len < 1.5f) return;
+        Vector2 u = d / len;
+        float yaw = Mathf.Atan2(u.x, u.y) * Mathf.Rad2Deg;
+        int n = Mathf.Max(1, Mathf.FloorToInt(len / 2.5f));
+        for (int k = 1; k <= n; k++)
+        {
+            Vector2 c = a + u * (len * k / (n + 1f));
+            var ch = Sub(g, "LaneArrow", new Vector3(c.x, AreaTop + 0.007f, c.y), Quaternion.Euler(0f, yaw, 0f));
+            for (int sgn = -1; sgn <= 1; sgn += 2)   // 끝이 진행 방향(+Z)에서 만나는 꺾쇠
+            {
+                var arm = SB.Prim(ch, PrimitiveType.Cube, "Arm", new Vector3(sgn * 0.13f, 0f, -0.1f), new Vector3(0.07f, 0.004f, 0.36f), m);
+                arm.transform.localRotation = Quaternion.Euler(0f, -sgn * 35f, 0f);
+            }
+        }
+    }
+
+    static void Dashed(GameObject g, Vector2 a, Vector2 b, Material m)
+    {
+        Vector2 d = b - a;
+        float len = d.magnitude;
+        if (len < 0.1f) return;
+        Vector2 u = d / len;
+        float yaw = Mathf.Atan2(u.x, u.y) * Mathf.Rad2Deg;
+        for (float t = 0.2f; t < len - 0.2f; t += 1.0f)
+        {
+            float l = Mathf.Min(0.6f, len - 0.2f - t);
+            Vector2 c = a + u * (t + l * 0.5f);
+            var s = SB.Box(g, "LaneDash", new Vector3(c.x, AreaTop + 0.006f, c.y), new Vector3(0.1f, 0.004f, l), m);
+            s.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+        }
+    }
+
+    static void HazardRect(GameObject g, Rect r, float w)
+    {
+        int nx = Mathf.Max(2, Mathf.RoundToInt(r.width / 0.3f)), nz = Mathf.Max(2, Mathf.RoundToInt(r.height / 0.3f));
+        for (int i = 0; i < nx; i++)
+        {
+            float x = r.xMin + (i + 0.5f) * r.width / nx;
+            var m = i % 2 == 0 ? SB.mDoorFrame : SB.mDoorStripe;
+            SB.Box(g, "Hazard", new Vector3(x, AreaTop + 0.005f, r.yMin), new Vector3(r.width / nx, 0.004f, w), m);
+            SB.Box(g, "Hazard", new Vector3(x, AreaTop + 0.005f, r.yMax), new Vector3(r.width / nx, 0.004f, w), m);
+        }
+        for (int i = 0; i < nz; i++)
+        {
+            float z = r.yMin + (i + 0.5f) * r.height / nz;
+            var m = i % 2 == 0 ? SB.mDoorStripe : SB.mDoorFrame;
+            SB.Box(g, "Hazard", new Vector3(r.xMin, AreaTop + 0.005f, z), new Vector3(w, 0.004f, r.height / nz), m);
+            SB.Box(g, "Hazard", new Vector3(r.xMax, AreaTop + 0.005f, z), new Vector3(w, 0.004f, r.height / nz), m);
+        }
+    }
+
+    /// <summary>실시간 상태 전광판 (북쪽 벽). 글자는 WallStatusBoard가 Play 중에 채운다</summary>
+    static void StatusBoard(GameObject wall, Vector3 p)
+    {
+        var g = Sub(wall, "StatusBoard", p, wall.transform.rotation);
+        var mScreenDark = SB.Mat("Factory_BoardScreen", new Color(0.02f, 0.03f, 0.05f), 0.6f, 0f, new Color(0.01f, 0.02f, 0.04f));
+        SB.LocalBox(g, "Frame", Vector3.zero, new Vector3(4.0f, 1.9f, 0.12f), SB.mDoorStripe);
+        SB.LocalBox(g, "Screen", new Vector3(0f, 0f, -0.065f), new Vector3(3.8f, 1.7f, 0.01f), mScreenDark);
+        SB.LocalBox(g, "TopBar", new Vector3(0f, 0.72f, -0.072f), new Vector3(3.8f, 0.26f, 0.005f), SB.mDoorFrame);
+        var title = Text(g, "Title", "LINE A  LIVE STATUS", new Vector2(3.5f, 0.2f), new Color(0.06f, 0.06f, 0.07f));
+        title.transform.localPosition = new Vector3(0f, 0.72f, -0.078f);
+        var body = Text(g, "Body", "waiting for /factory/stats", new Vector2(3.5f, 1.25f), Color.white);
+        body.transform.localPosition = new Vector3(0f, -0.13f, -0.075f);
+        body.alignment = TextAlignmentOptions.MidlineLeft;
+        body.fontStyle = FontStyles.Normal;
+        body.richText = true;
+        // 받침대 2개 (벽에서 앞으로 나온 것을 잡아 주는 팔)
+        foreach (float x in new[] { -1.5f, 1.5f })
+            SB.LocalBox(g, "Arm", new Vector3(x, 0f, 0.3f), new Vector3(0.06f, 0.06f, 0.5f), SB.mCap);
+        g.AddComponent<WallStatusBoard>();
     }
 
     static float Jit(int i) => Mathf.Sin(i * 12.9898f) * 0.5f;   // 매번 같은 값 (다시 만들어도 모양이 같게)
