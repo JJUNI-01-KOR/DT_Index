@@ -78,14 +78,14 @@ DT_Index/
 | `factory_manager/factory_manager_node.py` | 수정 | 노드 본체. 토픽 구독·발행, `/arm_1_pick_place` 클라이언트, 1초 타이머(state·stats·heartbeat)를 연결하고 판단은 아래 모듈에 맡긴다 | 전체 |
 | `factory_manager/fsm.py` | 수정 | 공정 상태 4개(IDLE, RUNNING, ERROR, E_STOP)와 전이표 (SRS 부록 A.2). `PALLET_FULL` 삭제. **실행하면 E_STOP(원인 `startup`)으로 시작**. E_STOP 원인(`button`, `heartbeat`, `timeout_weight`, `timeout_agv`, `startup`)과 고장 목록(먼저 난 순서) 관리 | FR-01, 16~19 |
 | `factory_manager/line_rules.py` | 수정 | 투입 조건: 적재함에 방석 있음 + 직전 방석 무게 보고 받음 + `main+ok`와 `main+ng`가 모두 레인 용량 미만 (`/conveyor_1_load`) | FR-02, 04 |
-| `factory_manager/grading.py` | 예정 | 무게 판정. 정상 범위(하한·상한 포함, yaml) 안이면 `ok`, 밖이면 `ng`. JSON 오류는 `ng` + 경고 | FR-07 |
-| `factory_manager/pallet_queue.py` | 예정 | 파레트별 적재 수(`/pallet_N_placed`로 +1), 적재 기준에 **닿는 순간 한 번만** 운반 대기열에 넣기, `/pallet_N_status`가 READY로 **바뀔 때만** 0으로 | FR-12, 15 |
-| `factory_manager/agv_dispatch.py` | 예정 | 운반 중 파레트 기록, `/agv_1_loaded`의 바뀜을 보고 `PN_DOCK` → `FINAL` → 다음 `PN_DOCK` 또는 `HOME` 결정 (SRS 부록 A.6). 출동 조건은 RUNNING이 될 때, 대기열·자리 상태·적재 여부가 바뀔 때, 1초마다 검사 | FR-13 |
-| `factory_manager/watchdog.py` | 예정 | 감시 시간 2개. 팔1 투입 성공 뒤 15초 안에 그 방석의 무게 보고가 없으면 `timeout_weight`, PN_DOCK·FINAL 뒤 30초 안에 `/agv_1_loaded`가 바뀌지 않으면 `timeout_agv` → E_STOP. RUNNING 동안만 세고 RUNNING으로 돌아오면 처음부터 | FR-02, 13 |
-| `factory_manager/stats.py` | 예정 | `/factory/stats` JSON (SRS 부록 A.4). `fault`(ERROR일 때), `estop`(E_STOP 원인) 포함. 받은 값은 그대로 담고 따로 세지 않는다 | FR-20 |
-| `factory_manager/heartbeat_monitor.py` | 예정 | `/factory/heartbeat_ros` 1초 발행, `/factory/heartbeat_unity`가 3초 끊기면 E_STOP | FR-17, NFR-04 |
+| `factory_manager/grading.py` | 있음 | 무게 판정. 정상 범위(하한·상한 포함, yaml) 안이면 `ok`, 밖이면 `ng`. JSON 오류는 `ng` + 경고 | FR-07 |
+| `factory_manager/pallet_queue.py` | 있음 | 파레트별 적재 수(`/pallet_N_placed`로 +1), 적재 기준에 **닿는 순간 한 번만** 운반 대기열에 넣기, `/pallet_N_status`가 READY로 **바뀔 때만** 0으로 | FR-12, 15 |
+| `factory_manager/agv_dispatch.py` | 있음 | 운반 중 파레트 기록, `/agv_1_loaded`의 바뀜을 보고 `PN_DOCK` → `FINAL` → 다음 `PN_DOCK` 또는 `HOME` 결정 (SRS 부록 A.6). 출동 조건은 RUNNING이 될 때, 대기열·자리 상태·적재 여부가 바뀔 때, 1초마다 검사 | FR-13 |
+| `factory_manager/watchdog.py` | 있음 | 감시 시간 2개. 팔1 투입 성공 뒤 15초 안에 그 방석의 무게 보고가 없으면 `timeout_weight`, PN_DOCK·FINAL 뒤 30초 안에 `/agv_1_loaded`가 바뀌지 않으면 `timeout_agv` → E_STOP. RUNNING 동안만 세고 RUNNING으로 돌아오면 처음부터 | FR-02, 13 |
+| `factory_manager/stats.py` | 있음 | `/factory/stats` JSON (SRS 부록 A.4). `fault`(ERROR일 때), `estop`(E_STOP 원인) 포함. 받은 값은 그대로 담고 따로 세지 않는다 | FR-20 |
+| `factory_manager/heartbeat_monitor.py` | 안 만듦 | `/factory/heartbeat_ros` 1초 발행, `/factory/heartbeat_unity`가 3초 끊기면 E_STOP. 따로 모듈을 두지 않고 `factory_manager_node.py`의 `on_heartbeat_tick`에서 처리 | FR-17, NFR-04 |
 | `test/test_fsm.py`, `test/test_line_rules.py` | 수정 | v3.1 상태·투입 조건으로 갱신 | NFR-03 |
-| `test/test_grading.py`, `test/test_pallet_queue.py`, `test/test_agv_dispatch.py`, `test/test_watchdog.py` | 예정 | 경계값(TC-09), 대기열 중복 방지(TC-15·16), 명령 순서(TC-17·41), 감시 시간(TC-40·42) | |
+| `test/test_grading.py`, `test/test_pallet_queue.py`, `test/test_agv_dispatch.py`, `test/test_watchdog.py`, `test/test_stats.py` | 있음 | 경계값(TC-09), 대기열 중복 방지(TC-15·16), 명령 순서(TC-17·41), 감시 시간(TC-40·42) | |
 
 **토픽 요약**
 - 구독: `/factory/start`, `/factory/emergency_stop`, `/factory/fault`, `/factory/fault_clear`, `/factory/inject_fault`, `/factory/heartbeat_unity`, `/bin/count`, `/scale_1_weight`, `/conveyor_1_load`, `/pallet_1_placed`, `/pallet_2_placed`, `/pallet_1_status`, `/pallet_2_status`, `/agv_1_loaded`

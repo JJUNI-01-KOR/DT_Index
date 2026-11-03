@@ -12,16 +12,18 @@
 ## 모듈 (판단은 rclpy 없는 순수 Python → pytest)
 | 파일 | 상태 | 내용 |
 |---|---|---|
-| `fsm.py` | 동작 | 4상태, E_STOP 시작과 원인, 해제, [시작]. ERROR·고장 목록은 TODO |
-| `grading.py` | 뼈대 | 무게 판정 (FR-07) |
+| `fsm.py` | 동작 | 4상태, E_STOP 시작과 원인, 해제, [시작], ERROR와 고장 목록 (FR-01, 16~19) |
+| `grading.py` | 동작 | 무게 판정 (FR-07) |
 | `line_rules.py` | 동작 | 투입 조건: 레인 용량, 무게 보고 대기 (FR-02, 04) |
 | `pallet_queue.py` | 동작 | 적재 수와 운반 대기열 (FR-12, 15) |
 | `agv_dispatch.py` | 동작 | AGV1 명령 P1_DOCK·P2_DOCK·FINAL·HOME (FR-13) |
-| `watchdog.py` | 뼈대 | 감시 시간 무게 보고 15초, AGV1 30초 (FR-02, 13) |
-| `stats.py` | 뼈대 | `/factory/stats` JSON (FR-20) |
+| `watchdog.py` | 동작 | 감시 시간 무게 보고 15초, AGV1 30초 (FR-02, 13) |
+| `stats.py` | 동작 | `/factory/stats` JSON (FR-20) |
 
-지금 동작하는 흐름: E_STOP → [해제] → IDLE → [시작] → RUNNING → `/conveyor/cmd(true)`, 비상정지 → 정지.
-v3.1 토픽은 모두 구독·발행 선언만 되어 있고 콜백은 `TODO(FR-xx)`이다. 팔1 투입은 `FeedRule`이 채워지면 나간다.
+Heartbeat(FR-17)는 따로 모듈을 두지 않고 노드의 `on_heartbeat_tick`에서 처리한다.
+
+지금 동작하는 흐름: E_STOP → [해제] → IDLE → [시작] → RUNNING → 팔1 투입 → 무게 판정 → 분기 → 파레트 적재 → AGV 운반.
+집기 실패·고장 주입은 ERROR → 3초 조치 → RUNNING, 비상정지·통신 끊김·감시 시간 초과는 E_STOP (FR-16~19).
 
 ## 실행
 ```bash
