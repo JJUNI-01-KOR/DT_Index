@@ -19,6 +19,9 @@
 //   7. (11/01 A) 칸 2개가 다 차면 벨트 위 방석을 레인 끝 앞(holdDistance)에서 세워 둔다.
 //      예전에는 3번째 방석이 벨트 끝에서 기울며 떨어지다 그 자리에서 Kinematic으로 굳었다.
 //      칸이 비면 다시 놓아줘서 컨베이어가 밀어 내린다. (레인 용량 3 = 집는 자리 + 대기 + 벨트 위 1)
+//   8. (11/03) 2번 칸 → 1번 칸을 순간이동 대신 shiftSpeed로 밀어 옮긴다 (칸 사이 약 0.69 m).
+//      옮기는 중에는 1번 칸이 찬 것으로 보지만, 도착해야 ArrivedAtPickSpot을 알리고 TryGetAtPick에 잡힌다
+//      (팔이 움직이는 방석을 집지 않게). shiftSpeed를 0으로 하면 예전처럼 바로 옮긴다.
 //
 // 로봇팔 서버(ArmPickPlaceServer)에서 쓰는 법
 //   - 칸의 방석은 Kinematic이라 KinematicGripper.Grab()(물리 켜진 것만 찾음)으로는 안 잡힌다.
@@ -26,6 +29,7 @@
 //   - 놓기 성공 뒤 LaneEnd.NotifyPlaced(cushion)를 부르면 바로 당긴다 (안 불러도 4번 규칙으로 당겨짐).
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -53,6 +57,10 @@ public class LaneEnd : MonoBehaviour
     [Tooltip("칸 판 윗면보다 이만큼(m) 높이 있는 방석만 '벨트 위'로 본다 (떨어지는 중인 방석은 세우지 않음)")]
     [SerializeField] private float onBeltMinHeight = 0.2f;
 
+    [Header("칸 이동 (11/03)")]
+    [Tooltip("2번 칸 → 1번 칸으로 밀어 옮기는 속도(m/s). 0이면 예전처럼 바로 옮김")]
+    [SerializeField] private float shiftSpeed = 0.5f;
+
     [Header("로그")]
     [Tooltip("로그에 붙는 이름 (ok, ng)")]
     [SerializeField] private string laneLabel = "";
@@ -73,6 +81,7 @@ public class LaneEnd : MonoBehaviour
 
     private GameObject atPick;
     private GameObject atWait;
+    private GameObject shifting;   // 2번 칸 → 1번 칸으로 옮기는 중인 방석 (atPick과 같음, 도착 전까지)
     private readonly List<GameObject> queue = new List<GameObject>();
     private int lastCount;
 
@@ -133,7 +142,7 @@ public class LaneEnd : MonoBehaviour
         }
 
         // 7. 칸이 다 차면 벨트 위 방석을 세워 둔다
-        bool full = atPick != null && atWait != null;
+        bool full = atPick != null && (atWait != null || shifting != null);   // 옮기는 중에도 2번 칸 자리가 겹치지 않게 세워 둔다
         if (full != holding)
         {
             holding = full;
@@ -251,7 +260,7 @@ public class LaneEnd : MonoBehaviour
     {
         foreach (var l in all)
         {
-            if (l.atPick != null && l.atPick.name == cushionId)
+            if (l.atPick != null && l.atPick != l.shifting && l.atPick.name == cushionId)   // 옮기는 중이면 아직 못 집음
             {
                 cushion = l.atPick;
                 return true;
@@ -270,6 +279,7 @@ public class LaneEnd : MonoBehaviour
         foreach (var g in queue) if (g != null) { Destroy(g); n++; }
         atPick = null;
         atWait = null;
+        shifting = null;
         queue.Clear();
         NotifyCount();
         if (n > 0) Debug.Log($"{Tag} 초기화: 방석 {n}개 삭제");
@@ -287,9 +297,17 @@ public class LaneEnd : MonoBehaviour
             {
                 atPick = atWait;
                 atWait = null;
-                Seat(atPick, pickSpot);
-                Debug.Log($"{Tag} {atPick.name} 2번 칸 → 1번 칸 (집는 자리)");
-                ArrivedAtPickSpot?.Invoke(atPick);
+                if (shiftSpeed > 0f)
+                {
+                    Debug.Log($"{Tag} {atPick.name} 2번 칸 → 1번 칸 이동 시작");
+                    StartCoroutine(ShiftToPick(atPick));   // 도착하면 ArrivedAtPickSpot
+                }
+                else
+                {
+                    Seat(atPick, pickSpot);
+                    Debug.Log($"{Tag} {atPick.name} 2번 칸 → 1번 칸 (집는 자리)");
+                    ArrivedAtPickSpot?.Invoke(atPick);
+                }
                 moved = true;
                 continue;
             }
@@ -305,6 +323,43 @@ public class LaneEnd : MonoBehaviour
             }
             return moved;
         }
+    }
+
+    /// <summary>(11/03) 2번 칸 방석을 1번 칸까지 shiftSpeed로 밀어 옮긴다. 도착하면 칸에 고정하고 ArrivedAtPickSpot</summary>
+    IEnumerator ShiftToPick(GameObject go)
+    {
+        shifting = go;
+        var t = go.transform;
+        Vector3 from = t.position;
+        Quaternion fromRot = t.rotation;
+
+        // 도착 자리: Seat와 같은 기준 (1번 칸 판 윗면 + 방석 높이/2)
+        var col = go.GetComponentInChildren<Collider>();
+        float half = col != null && col.enabled ? from.y - col.bounds.min.y : 0f;
+        var spotCol = pickSpot.GetComponent<Collider>();
+        float floorY = spotCol != null ? spotCol.bounds.max.y : pickSpot.position.y;
+        Vector3 to = new Vector3(pickSpot.position.x, floorY + half + 0.001f, pickSpot.position.z);
+        Quaternion toRot = Quaternion.Euler(0f, pickSpot.eulerAngles.y, 0f);
+
+        float dur = Vector3.Distance(from, to) / shiftSpeed;
+        float elapsed = 0f;
+        while (elapsed < dur)
+        {
+            yield return null;
+            if (go == null || go != atPick)          // 옮기는 중에 삭제됐거나 초기화됨
+            {
+                if (shifting == go) shifting = null;
+                yield break;
+            }
+            elapsed += Time.deltaTime;
+            float k = Mathf.SmoothStep(0f, 1f, elapsed / dur);
+            t.SetPositionAndRotation(Vector3.Lerp(from, to, k), Quaternion.Slerp(fromRot, toRot, k));
+        }
+
+        shifting = null;
+        Seat(go, pickSpot);
+        Debug.Log($"{Tag} {go.name} 1번 칸 도착 (집는 자리)");
+        ArrivedAtPickSpot?.Invoke(go);
     }
 
     /// <summary>방석을 멈추고 칸 판 윗면 위에 바닥이 닿게 놓는다</summary>
