@@ -12,7 +12,7 @@ public static class TopicNames
     public const string InjectFault       = "/factory/inject_fault";    // std_msgs/String, [고장 주입] 대상 장비 id: arm_1~3, conveyor (FR-19, 선택)
 
     // ── Unity → ROS2 : 장비 보고 ──
-    public const string BinCount          = "/bin/count";               // std_msgs/Int32, 적재함 남은 방석 수. 바뀔 때 (FR-05)
+    public const string BinCount          = "/bin/count";               // std_msgs/Int32, 적재함 남은 방석 수. 바뀔 때 + 1초마다 (FR-05)
     public const string Scale1Weight      = "/scale_1_weight";          // std_msgs/String (JSON) {"id":"C012","kg":1.02}. 방석당 1회 (FR-06)
     public const string Conveyor1Load     = "/conveyor_1_load";         // std_msgs/String (JSON) {"main":1,"ok":2,"ng":0}. 바뀔 때와 1초마다 (FR-04)
     public const string Conveyor1EndOk    = "/conveyor_1_end_ok";       // std_msgs/String, 정상 레인 집는 자리에 들어온 방석 id. 방석당 1회 (FR-09)
