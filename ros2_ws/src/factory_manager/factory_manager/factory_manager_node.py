@@ -281,7 +281,7 @@ class FactoryManager(Node):
             return
         before = self.agv.loaded
         run = self.fsm.state == RUNNING
-        cmd = self.agv.on_loaded(msg.data, run, self.pallets.front_ready())
+        cmd = self.agv.on_loaded(msg.data, run, self.pallets.front_ready(), self.now_sec())
         if msg.data != before:
             self.watchdog.stop_agv()
         if cmd is not None:
@@ -322,7 +322,7 @@ class FactoryManager(Node):
         self.set_conveyor(run and not self.feed_rule.lane_end_full())
         if run and self.feed_rule.can_feed(self.bin_count, self.arm1_busy, self.now_sec()):
             self.feed()
-        cmd = self.agv.try_dispatch(run, self.pallets.front_ready())
+        cmd = self.agv.try_dispatch(run, self.pallets.front_ready(), self.now_sec())
         if cmd is not None:
             self.send_agv(cmd)
     
