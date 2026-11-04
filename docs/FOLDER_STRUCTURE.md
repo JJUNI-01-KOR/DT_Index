@@ -335,3 +335,11 @@ stats.py ──/factory/stats──▶ StatusPanel.cs
 | `Scenes/Sandbox/BoxTest.unity` | 지워진 BoxBin 프리팹을 참조하던 연습 씬 (삭제함) |
 | 팔4, 출고 팔레트(12칸), [팔레트 정리] 버튼 관련 코드 | 설비 삭제 |
 | 미머지 브랜치 `feature/bringup-launch-params`, `feature/bringup-line-coords`, `feature/palletizer-layout` | 머지하거나 v3.1 기준으로 다시 작업. `feature/palletizer-layout`(12칸 2×2×3단)은 11/03 `stacker.py`로 대체되어 삭제 대상 |
+
+## FR20 RViz 표시 추가 (2026-11-04)
+
+- `ros2_ws/src/dt_description/launch/arms_display.launch.py`: 팔 1~3 상태 발행 노드
+- `ros2_ws/src/dt_description/urdf/fairino20_v6.urdf`: FR20 관절·링크 모델
+- `ros2_ws/src/dt_description/meshes/fairino20_v6/*.STL`: FR20 원본 메시 7개, Git LFS
+- `ros2_ws/src/dt_description/rviz/agv_1.rviz`: 기존 AGV와 팔 3대 표시 설정
+- 실행·토픽·DDS 설정은 `ros2_ws/src/dt_description/README.md` 참고
