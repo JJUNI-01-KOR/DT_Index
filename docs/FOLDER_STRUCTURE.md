@@ -152,7 +152,7 @@ Unity AGV1을 RViz에서 모델로 보이게 하고 공장 배치를 같은 좌�
 | 파일 | 상태 | 역할 |
 |---|---|---|
 | `urdf/agv_1.urdf` | 완료 (11/03 D) | robot_boxy를 상자·원기둥으로 단순화 (구매 에셋 메시는 쓰지 않음). 치수는 robot_boxy.fbx 뼈대에서 잼: 바퀴 간격 좌우 0.368·앞뒤 0.274 m, 높이 0.109. 바퀴 관절 이름 = Unity `bone_wheel_*` |
-| `launch/agv_1_display.launch.py` | 완료 (11/03 D) | robot_state_publisher(`/agv_1_joint_states` → 바퀴 TF, `/agv_1_description`) + RViz. `test:=true`면 Unity 없이 HOME에 고정해 모델만 확인 |
+| `launch/factory_display.launch.py` | 완료 (11/04 D) | robot_state_publisher(`/agv_1_joint_states` → 바퀴 TF, `/agv_1_description`) + 팔 1~3(`arms_display.launch.py` 포함, `arms:=false`로 끔) + 공장 배치 + RViz. `test:=true`면 Unity 없이 AGV를 HOME에 고정해 모델만 확인 |
 | `rviz/agv_1.rviz` | 완료 (11/03 D) | Fixed Frame `map`, Grid, TF, Factory Layout, RobotModel |
 | `scripts/factory_layout_markers.py` | 완료 (11/04 D) | 컨베이어·파레트 자리·예비 자리·최종 구역·집는 자리·팔·적재함·무게 센서·분기·AGV 정지 지점과 도킹별 경로 + Unity 공장 환경(묶음마다 TRIANGLE_LIST) → `/factory_layout` (MarkerArray, 30초마다) |
 | `config/factory_layout.yaml` | 완료 (11/04 D) | 컨베이어 칸 위치 + 공장 환경 도형 (Unity Main·공장 프리팹에서 뽑음, 직접 고치지 않음) |

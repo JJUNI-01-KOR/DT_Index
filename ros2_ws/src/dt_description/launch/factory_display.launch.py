@@ -1,9 +1,13 @@
-"""AGV1 모델과 공장 배치를 RViz에 표시한다 (FR-13 확인·시연용). 담당 D · scope bringup
+"""AGV1·팔 1~3 모델과 공장 배치를 RViz에 표시한다 (FR-13 확인·시연용). 담당 D · scope bringup
 
-    ros2 launch dt_description agv_1_display.launch.py              # Unity Play 중: Unity가 보내는 /tf, /agv_1_joint_states로 움직임
-    ros2 launch dt_description agv_1_display.launch.py test:=true    # Unity 없이 모델만: map → agv_1_link를 HOME에 고정, 바퀴 0
-    ros2 launch dt_description agv_1_display.launch.py rviz:=false   # RViz 없이 (RViz는 따로 띄울 때)
-    ros2 launch dt_description agv_1_display.launch.py layout:=false # 공장 배치 표시물 없이
+    ros2 launch dt_description factory_display.launch.py              # Unity Play 중: Unity가 보내는 /tf, 관절 상태로 움직임
+    ros2 launch dt_description factory_display.launch.py test:=true    # Unity 없이 모델만: map → agv_1_link를 HOME에 고정, 바퀴 0
+    ros2 launch dt_description factory_display.launch.py rviz:=false   # RViz 없이 (RViz는 따로 띄울 때)
+    ros2 launch dt_description factory_display.launch.py layout:=false # 공장 배치 표시물 없이
+    ros2 launch dt_description factory_display.launch.py arms:=false   # 팔 1~3 없이 AGV만
+
+팔 1~3은 arms_display.launch.py를 그대로 불러 띄운다 (arms:=true 기본). 이 launch를 켰으면 arms_display.launch.py를 따로 켜지 않는다.
+팔은 Unity가 보내는 map → arm_N/base_link와 /arm_N_joint_states로 보이므로 test:=true(Unity 없음)에서는 RViz에 팔 TF 경고가 뜬다.
 
 robot_state_publisher가 urdf/agv_1.urdf를 읽어 agv_1_link → 몸통·바퀴 TF를 낸다.
   구독: /agv_1_joint_states (Unity AgvWaypointDriver, 바퀴 4개 각도, 10 Hz)
@@ -16,8 +20,9 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, ExecuteProcess
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription
 from launch.conditions import IfCondition
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
@@ -33,12 +38,19 @@ def generate_launch_description():
     rviz = LaunchConfiguration('rviz')
     test = LaunchConfiguration('test')
     layout = LaunchConfiguration('layout')
+    arms = LaunchConfiguration('arms')
     zeros = '{name: [%s], position: [0.0, 0.0, 0.0, 0.0]}' % ', '.join(WHEELS)
 
     return LaunchDescription([
         DeclareLaunchArgument('rviz', default_value='true', description='RViz도 같이 띄움'),
         DeclareLaunchArgument('test', default_value='false', description='Unity 없이 모델만 확인 (HOME 고정, 바퀴 0)'),
         DeclareLaunchArgument('layout', default_value='true', description='공장 배치 표시물 (/factory_layout)'),
+        DeclareLaunchArgument('arms', default_value='true', description='팔 1~3 FR20 모델 (arms_display.launch.py)'),
+
+        # 팔 1~3: robot_state_publisher 3개 (/arm_N_joint_states → arm_N/ TF, /arm_N_description)
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(os.path.join(share, 'launch', 'arms_display.launch.py')),
+            condition=IfCondition(arms)),
 
         Node(package='robot_state_publisher', executable='robot_state_publisher',
              name='agv_1_state_publisher', output='screen',

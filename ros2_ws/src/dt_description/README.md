@@ -8,7 +8,7 @@ Unity AGV1(robot_boxy)을 RViz에서 모델로 보이게 하고, 공장 배치(�
 | 파일 | 역할 |
 |---|---|
 | `urdf/agv_1.urdf` | 몸통·무한궤도·바퀴 4개를 상자·원기둥으로 단순화 (구매 에셋 메시는 쓰지 않음). 바퀴 관절 이름 = Unity `bone_wheel_*` |
-| `launch/agv_1_display.launch.py` | robot_state_publisher(`/agv_1_joint_states` → 바퀴 TF) + RViz |
+| `launch/factory_display.launch.py` | robot_state_publisher(`/agv_1_joint_states` → 바퀴 TF) + 팔 1~3(`arms_display.launch.py` 포함, `arms:=true` 기본) + 공장 배치 + RViz. 이것 하나로 AGV·팔을 같이 띄운다 |
 | `rviz/agv_1.rviz` | Fixed Frame `map`, Grid, TF, Factory Layout(`/factory_layout`), RobotModel(`/agv_1_description`) |
 | `scripts/factory_layout_markers.py` | 공장 배치 표시물 → `/factory_layout` (MarkerArray, transient_local, 30초마다 다시 보냄). 공장 환경은 묶음마다 TRIANGLE_LIST 1개 (ns `env/<묶음>`) |
 | `config/factory_layout.yaml` | 컨베이어 칸 38개 위치 + 공장 환경 도형 약 1,100개 (Unity Main·공장 프리팹에서 뽑음, 직접 고치지 않음) |
@@ -19,11 +19,16 @@ Unity AGV1(robot_boxy)을 RViz에서 모델로 보이게 하고, 공장 배치(�
 colcon build --symlink-install --packages-select dt_description && source install/setup.bash
 
 # 1) Unity 없이 모델만 확인 (HOME 위치에 고정)
-ros2 launch dt_description agv_1_display.launch.py test:=true
+ros2 launch dt_description factory_display.launch.py test:=true
 
-# 2) 실제: factory.launch 켜고 Unity Play 중에 다른 터미널에서
-ros2 launch dt_description agv_1_display.launch.py
+# 2) 실제: factory.launch 켜고 Unity Play 중에 다른 터미널에서 (AGV + 팔 1~3 + 공장 배치)
+ros2 launch dt_description factory_display.launch.py
+
+# 팔 없이 AGV만
+ros2 launch dt_description factory_display.launch.py arms:=false
 ```
+팔 1~3도 이 launch가 같이 띄우므로 `arms_display.launch.py`는 따로 켜지 않는다 (같이 켜면 팔 노드가 두 번 뜬다).
+`test:=true`는 AGV만 HOME에 고정한다. 팔은 Unity가 보내는 TF·관절 값이 있어야 보이므로 Unity 없이는 RViz에 팔 TF 경고가 뜬다.
 
 ## 공장 배치 다시 뽑기 (Main 씬이나 공장 프리팹을 고쳤을 때)
 ```bash
@@ -90,7 +95,7 @@ ros2 launch dt_bringup factory.launch.py
 ```
 
 ```bash
-ros2 launch dt_description agv_1_display.launch.py
+ros2 launch dt_description factory_display.launch.py
 ```
 
 ```bash
