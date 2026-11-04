@@ -37,6 +37,8 @@ public static class TopicNames
     // ── 로봇팔 서비스 (번호 1~3, Unity가 서버) ──
     public static string ArmPickPlace(int armId) => $"/arm_{armId}_pick_place";   // factory_interfaces/PickPlace. 20초 무응답이면 호출 쪽이 실패 처리
 
+    public static string ArmJointStates(int armId) => $"/arm_{armId}_joint_states"; // sensor_msgs/JointState, 10 Hz
+
     // ── 연결 테스트 전용 ──
     public const string UnityPing         = "/unity_ping";              // std_msgs/String
 }
