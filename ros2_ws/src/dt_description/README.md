@@ -1,6 +1,6 @@
 # dt_description — AGV1 URDF와 공장 배치 RViz 표시 (D)
 
-Unity AGV1(robot_boxy)을 RViz에서 모델로 보이게 하고, 공장 배치(컨베이어·파레트 자리·팔·AGV 경로)를 같은 좌표로 그린다.
+Unity AGV1(robot_boxy)을 RViz에서 모델로 보이게 하고, 공장 배치(컨베이어·파레트 자리·팔·AGV 경로)와 Unity 공장 환경(벽 아랫단·선반·바닥 구역·바닥 표시·소품)을 같은 좌표로 그린다.
 실제 주행은 Unity가 하고, 여기는 **보이기만** 한다.
 
 ![배치 미리보기 (위에서 본 모습, ROS 좌표)](tools/layout_preview.png)
@@ -10,9 +10,9 @@ Unity AGV1(robot_boxy)을 RViz에서 모델로 보이게 하고, 공장 배치(�
 | `urdf/agv_1.urdf` | 몸통·무한궤도·바퀴 4개를 상자·원기둥으로 단순화 (구매 에셋 메시는 쓰지 않음). 바퀴 관절 이름 = Unity `bone_wheel_*` |
 | `launch/agv_1_display.launch.py` | robot_state_publisher(`/agv_1_joint_states` → 바퀴 TF) + RViz |
 | `rviz/agv_1.rviz` | Fixed Frame `map`, Grid, TF, Factory Layout(`/factory_layout`), RobotModel(`/agv_1_description`) |
-| `scripts/factory_layout_markers.py` | 공장 배치 표시물 → `/factory_layout` (MarkerArray, transient_local, 5초마다) |
-| `config/factory_layout.yaml` | 컨베이어 칸 38개 위치 (Unity Main에서 뽑음, 직접 고치지 않음) |
-| `tools/export_unity_layout.py` | Main.unity → `config/factory_layout.yaml`. 컨베이어를 옮기면 다시 실행 |
+| `scripts/factory_layout_markers.py` | 공장 배치 표시물 → `/factory_layout` (MarkerArray, transient_local, 30초마다 다시 보냄). 공장 환경은 묶음마다 TRIANGLE_LIST 1개 (ns `env/<묶음>`) |
+| `config/factory_layout.yaml` | 컨베이어 칸 38개 위치 + 공장 환경 도형 약 1,100개 (Unity Main·공장 프리팹에서 뽑음, 직접 고치지 않음) |
+| `tools/export_unity_layout.py` | Main.unity(+ `FactoryShell`·`FinalZoneDecor` 프리팹) → `config/factory_layout.yaml`. Main이나 공장 프리팹을 고치면 다시 실행 |
 
 ## 쓰는 법
 ```bash
@@ -25,12 +25,22 @@ ros2 launch dt_description agv_1_display.launch.py test:=true
 ros2 launch dt_description agv_1_display.launch.py
 ```
 
-## 공장 배치 다시 뽑기 (Main 씬에서 컨베이어를 옮겼을 때)
+## 공장 배치 다시 뽑기 (Main 씬이나 공장 프리팹을 고쳤을 때)
 ```bash
 cd ros2_ws/src/dt_description
 python3 tools/export_unity_layout.py ../../../unity/INDEX_Twin/Assets/_Project/Scenes/Main.unity config/factory_layout.yaml
 ```
 파레트 자리·팔·집는 자리·AGV 정지 지점은 `dt_bringup/config/line_coords.yaml`, `agv_waypoints.yaml`(공식 좌표표)을 그대로 읽는다.
+다시 뽑은 뒤 `colcon build`하고 launch를 다시 켜야 RViz에 반영된다.
+
+뽑는 것과 빼는 것
+- 뽑음: 씬과 공장 프리팹 안의 기본 도형(Cube·Cylinder)의 위치·회전·크기·색 (머티리얼 `_BaseColor`)
+- 뺌: 꺼진 오브젝트·렌더러, 3.2 m보다 높이 올라가는 것(벽 위쪽·지붕·높은 간판), 6 cm보다 작은 것, 400 m²보다 넓은 바닥판, `Ground`·`Roof`
+- 로봇팔·AGV·방석·파레트는 뽑지 않는다 (URDF, `line_coords.yaml`, 실시간 TF가 맡음)
+
+RViz에서 보기
+- Factory Layout → Namespaces에서 `env/FactoryShell`(벽·통로) 등 묶음별로 끄고 켤 수 있다
+- AGV 경로 선: 주황 = HOME → 도킹, 파랑 = 도킹 → FINAL (도킹마다 2 m 직진 뒤 FINAL, `agv_waypoints.yaml`의 `to_final_from_pN_dock`), 초록 = FINAL → HOME
 
 ## 토픽·프레임
 - Unity → ROS: `/tf` (map → agv_1_link, 10 Hz), `/agv_1_joint_states` (바퀴 4개 각도, 10 Hz) — `AgvWaypointDriver.cs`
