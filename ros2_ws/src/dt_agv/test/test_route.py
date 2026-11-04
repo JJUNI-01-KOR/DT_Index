@@ -1,4 +1,6 @@
 """AGV1 경로 단위 테스트 (ROS 없이). SRS v3.1 FR-13, 부록 A.6."""
+import pytest
+
 from dt_agv.route import AgvRoute, DOCKS, FINAL, HOME
 
 STOPS = {
@@ -110,3 +112,44 @@ def test_every_goal_has_nonempty_wp():
     assert goal.get('wp')
     nxt = r.on_arrived()
     assert nxt.get('wp')
+
+
+@pytest.mark.parametrize('dock,x', [('P1_DOCK', -6.5), ('P2_DOCK', 5.4)])
+def test_loaded_dock_selects_yaml_exit_before_final(dock, x):
+    exits = {
+        'to_final_from_p1_dock': [{'x': -6.5, 'y': 21.0, 'yaw': 1.571}],
+        'to_final_from_p2_dock': [{'x': 5.4, 'y': 21.0, 'yaw': 1.571}],
+    }
+    r = AgvRoute(STOPS, {**ROUTE, **exits})
+    r.start(dock)
+    r.on_arrived()
+    assert r.on_arrived() == {'hitch': 'attach'}
+    assert r.on_attached() is True
+    goal, warn = r.start(FINAL)
+    assert warn is None
+    assert goal == {'wp': 'FINAL_via', 'x': x, 'y': 21.0, 'yaw': 1.571}
+    assert r.on_arrived() == {'wp': FINAL, **STOPS[FINAL]}
+    assert r.on_arrived() == {'hitch': 'detach'}
+    assert r.on_detached() is False
+    assert r.loaded_from is None
+
+
+def test_legacy_yaml_after_attach_uses_common_final_route():
+    r = new_route()
+    r.start('P2_DOCK')
+    r.on_attached()
+    goal, warn = r.start(FINAL)
+    assert warn is None
+    assert goal == {'wp': FINAL, **STOPS[FINAL]}
+
+
+def test_estop_discards_loaded_dock_before_next_cycle():
+    r = new_route()
+    r.start('P1_DOCK')
+    r.on_attached()
+    assert r.loaded_from == 'P1_DOCK'
+    r.on_estop_cleared()
+    assert r.loaded_from is None
+    r.start('P2_DOCK')
+    r.on_attached()
+    assert r.loaded_from == 'P2_DOCK'
