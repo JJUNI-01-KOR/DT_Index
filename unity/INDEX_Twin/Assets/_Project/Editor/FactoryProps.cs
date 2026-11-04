@@ -467,6 +467,9 @@ public static class FactoryProps
     static readonly Vector2 AgvP1 = new Vector2(-19f, -6.5f);
     static readonly Vector2 AgvP2 = new Vector2(-19f, 5.4f);
     static readonly Vector2 AgvFinal = new Vector2(-23f, -0.75f);
+    // 11/04: 상차 후 이탈 경유점 (agv_waypoints.yaml to_final_from_p1_dock·to_final_from_p2_dock, 도킹 위치 앞 2 m)
+    static readonly Vector2 AgvExit1 = new Vector2(-21f, -6.5f);
+    static readonly Vector2 AgvExit2 = new Vector2(-21f, 5.4f);
 
     // 라인 안쪽 바닥(Environment/Area의 Work Area 판, 두께 0.01)의 윗면. 그 위에 그려야 보인다
     const float AreaTop = 0.011f;
@@ -483,7 +486,7 @@ public static class FactoryProps
         // 주행선: FINAL ↔ HOME (가로), P1_DOCK ↔ P2_DOCK (세로, 가운데 줄 x -19)
         // 11/03 A: agv_waypoints.yaml + dt_agv/route.py 실제 경로대로 (일방통행 루프)
         //   출동(빈 AGV, 주황): HOME → 경유점(-19, -0.75) → P1_DOCK 또는 P2_DOCK
-        //   견인(파레트 끌고, 파랑): 도킹 위치 → FINAL 대각선 직선 (to_final 경유점 없음)
+        //   견인(파레트 끌고, 파랑): 도킹 위치 → 앞 2 m 이탈 경유점 → FINAL (11/04, to_final_from_pN_dock)
         //   복귀(초록): FINAL → HOME 직선. 출동선과 같은 줄이라 남쪽으로 0.35 m 비켜 그린다
         var mTow = SB.Mat("Factory_AgvTow", new Color(0.20f, 0.55f, 1.0f), 0.2f, 0f);
         var mBack = SB.Mat("Factory_AgvReturn", new Color(0.25f, 0.85f, 0.40f), 0.2f, 0f);
@@ -491,16 +494,18 @@ public static class FactoryProps
         Lane(g, home, AgvTurn, mLane);
         Lane(g, AgvTurn, AgvP1, mLane);
         Lane(g, AgvTurn, AgvP2, mLane);
-        Lane(g, AgvP1, AgvFinal, mTow);
-        Lane(g, AgvP2, AgvFinal, mTow);
+        Lane(g, AgvP1, AgvExit1, mTow);
+        Lane(g, AgvExit1, AgvFinal, mTow);
+        Lane(g, AgvP2, AgvExit2, mTow);
+        Lane(g, AgvExit2, AgvFinal, mTow);
         Lane(g, AgvFinal + off, home + off, mBack);
 
         Color cOut = mLane.GetColor("_BaseColor"), cTow = mTow.GetColor("_BaseColor"), cBack = mBack.GetColor("_BaseColor");
         FactoryProps.FloorText(g, "TO DOCK", new Vector3(AgvTurn.x + 0.55f, AreaTop + 0.012f, (AgvTurn.y + AgvP2.y) * 0.5f), new Vector2(1.4f, 0.28f), -90f, cOut);
         FactoryProps.FloorText(g, "TO DOCK", new Vector3(AgvTurn.x + 0.55f, AreaTop + 0.012f, (AgvTurn.y + AgvP1.y) * 0.5f), new Vector2(1.4f, 0.28f), -90f, cOut);
-        Vector2 t1 = Vector2.Lerp(AgvP1, AgvFinal, 0.5f), t2 = Vector2.Lerp(AgvP2, AgvFinal, 0.5f);
-        FactoryProps.FloorText(g, "TOWING", new Vector3(t1.x - 0.6f, AreaTop + 0.012f, t1.y), new Vector2(1.2f, 0.28f), 0f, cTow);
-        FactoryProps.FloorText(g, "TOWING", new Vector3(t2.x - 0.6f, AreaTop + 0.012f, t2.y), new Vector2(1.2f, 0.28f), 0f, cTow);
+        Vector2 t1 = Vector2.Lerp(AgvExit1, AgvFinal, 0.5f), t2 = Vector2.Lerp(AgvExit2, AgvFinal, 0.5f);
+        FactoryProps.FloorText(g, "TOWING", new Vector3(t1.x - 0.75f, AreaTop + 0.012f, t1.y), new Vector2(1.2f, 0.28f), 0f, cTow);
+        FactoryProps.FloorText(g, "TOWING", new Vector3(t2.x - 0.75f, AreaTop + 0.012f, t2.y), new Vector2(1.2f, 0.28f), 0f, cTow);
         FactoryProps.FloorText(g, "RETURN", new Vector3((AgvFinal.x + AgvTurn.x) * 0.5f, AreaTop + 0.012f, AgvFinal.y - 0.75f), new Vector2(1.2f, 0.28f), 0f, cBack);
 
         // HOME 칸 + 충전기 (주행선 북쪽 옆, 길 위가 아님)
@@ -523,26 +528,10 @@ public static class FactoryProps
         }
     }
 
-    /// <summary>점선 + 진행 방향 꺾쇠 (a → b)</summary>
+    /// <summary>점선 (a → b). 11/04: 진행 방향 꺾쇠(LaneArrow)는 그리지 않는다</summary>
     static void Lane(GameObject g, Vector2 a, Vector2 b, Material m)
     {
         Dashed(g, a, b, m);
-        Vector2 d = b - a;
-        float len = d.magnitude;
-        if (len < 1.5f) return;
-        Vector2 u = d / len;
-        float yaw = Mathf.Atan2(u.x, u.y) * Mathf.Rad2Deg;
-        int n = Mathf.Max(1, Mathf.FloorToInt(len / 2.5f));
-        for (int k = 1; k <= n; k++)
-        {
-            Vector2 c = a + u * (len * k / (n + 1f));
-            var ch = Sub(g, "LaneArrow", new Vector3(c.x, AreaTop + 0.007f, c.y), Quaternion.Euler(0f, yaw, 0f));
-            for (int sgn = -1; sgn <= 1; sgn += 2)   // 끝이 진행 방향(+Z)에서 만나는 꺾쇠
-            {
-                var arm = SB.Prim(ch, PrimitiveType.Cube, "Arm", new Vector3(sgn * 0.13f, 0f, -0.1f), new Vector3(0.07f, 0.004f, 0.36f), m);
-                arm.transform.localRotation = Quaternion.Euler(0f, -sgn * 35f, 0f);
-            }
-        }
     }
 
     static void Dashed(GameObject g, Vector2 a, Vector2 b, Material m)
