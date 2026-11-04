@@ -11,7 +11,7 @@ palletizer 노드 하나가 레인 하나를 맡는다.
 """
 from collections import deque
 
-RUNNING, IDLE, E_STOP = 'RUNNING', 'IDLE', 'E_STOP'
+RUNNING, IDLE, E_STOP, ERROR = 'RUNNING', 'IDLE', 'E_STOP', 'ERROR'
 READY = 'READY'
 
 # 레인별 설정. 좌표는 dt_bringup/config/line_coords.yaml (pick_ok·pick_ng, pallet_1·pallet_2)
@@ -201,9 +201,14 @@ class Stacker:
 
     def check_timeout(self, now, timeout_sec):
         """응답이 timeout_sec 넘게 없으면 그 요청을 실패로 들고 돌려준다 (fault 발행은 노드). 아니면 None.
-        E_STOP 중에는 보지 않는다 (해제 때 비운다)."""
+        E_STOP 중에는 보지 않는다 (해제 때 비운다). ERROR 중에는 팔이 멈춰 있으므로 조치 완료 뒤 처음부터 다시 잰다 (FR-19)."""
         call = self.inflight
-        if call is None or self.state == E_STOP or now - call.sent_at < timeout_sec:
+        if call is None or self.state == E_STOP:
+            return None
+        if self.state == ERROR:
+            call.sent_at = now      # 고장 중 팔은 멈춰 있다. 조치 완료 뒤 시간 제한을 처음부터 다시 잰다 (FR-19)
+            return None
+        if now - call.sent_at < timeout_sec:
             return None
         self.inflight = None
         self._hold(call, FAULT)

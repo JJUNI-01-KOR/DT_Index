@@ -156,6 +156,34 @@ def test_late_success_of_given_up_request_counts_as_placed():
     assert s.held is None and s.wait_level == 0
 
 
+
+def test_no_timeout_while_error_and_restarts_after_fix():
+    """고장(ERROR) 중에는 팔이 멈춰 있으므로 시간 제한을 보지 않고, 조치 완료(RUNNING) 뒤 처음부터 다시 잰다 (FR-19)."""
+    s = running()
+    s.on_arrived('C001')
+    call = s.next_call(0.0)
+    s.on_state('ERROR')
+    assert s.check_timeout(5.0, 20.0) is None
+    assert s.check_timeout(30.0, 20.0) is None      # 고장 중에는 20초가 지나도 실패가 아니다
+    assert s.inflight is call and s.held is None
+    s.on_state('RUNNING')                           # 조치 완료. 마지막으로 잰 30초부터 다시 20초
+    assert s.check_timeout(49.9, 20.0) is None
+    assert s.check_timeout(50.0, 20.0) is call and s.held is call
+
+
+def test_paused_request_finishes_after_fix_without_fault():
+    """고장 중 멈췄던 요청이 조치 완료 뒤 이어서 성공하면 그대로 놓은 것으로 친다 (retry 없음)."""
+    s = running()
+    s.on_arrived('C001')
+    call = s.next_call(0.0)
+    s.on_state('ERROR')
+    assert s.check_timeout(40.0, 20.0) is None
+    s.on_state('RUNNING')
+    assert s.check_timeout(41.0, 20.0) is None
+    assert s.on_response(call.seq, True, 'C001', 45.0) == (PLACED, 'C001')
+    assert s.held is None and s.wait_level == 0
+    assert not s.on_retry()                         # factory_manager의 retry는 들고 있는 요청이 없어 무시
+
 def test_estop_message_is_not_a_fault():
     s = running()
     s.on_arrived('C001')

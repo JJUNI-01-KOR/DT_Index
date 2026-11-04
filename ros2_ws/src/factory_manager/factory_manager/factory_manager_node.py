@@ -20,7 +20,7 @@ from rclpy.node import Node
 from std_msgs.msg import Bool, Int32, String
 
 from .agv_dispatch import AgvDispatcher, FINAL, HOME
-from .fsm import CAUSE_HEARTBEAT, E_STOP, Fsm, IDLE, RUNNING, parse_fault
+from .fsm import CAUSE_HEARTBEAT, E_STOP, ERROR, Fsm, IDLE, RUNNING, parse_fault
 from .grading import Grader, diverter_cmd, parse_weight
 from .line_rules import FeedRule, parse_load
 from .pallet_queue import PalletBook
@@ -395,6 +395,9 @@ class FactoryManager(Node):
     def check_arm1_timeout(self):
         """pick_timeout_sec 안에 응답이 없으면 실패로 처리한다 (FR-18)."""
         if self.arm1_sent_at is None or self.fsm.state == E_STOP:
+            return
+        if self.fsm.state == ERROR:
+            self.arm1_sent_at = self.now_sec()   # 고장 중 팔은 멈춰 있다. 조치 완료 뒤 시간 제한을 처음부터 다시 잰다 (FR-19)
             return
         if self.now_sec() - self.arm1_sent_at <= self.pick_timeout_sec:
             return
