@@ -34,19 +34,11 @@ public class AgvLink : MonoBehaviour
         public double x, y, yaw;
     }
 
-    [Header("상차 후 레일에서 직진 이탈")]
-    [Tooltip("상차 뒤 첫 이동 명령에서 현재 전방으로 먼저 이동할 거리(m)")]
-    [Min(0f)]
-    [SerializeField]
-    private float pullOutDistanceM = 2.0f;
-
     [Header("하차 후 복귀 대기")]
     [Tooltip("분리한 팔레트의 삭제를 기다리는 최대 시간. 초과 시 E_STOP 요청")]
     [Min(0.1f)]
     [SerializeField]
     private float clearanceTimeoutSec = 10f;
-
-    private const string PullOutWaypoint = "__AGV_PULL_OUT__";
 
     private AgvWaypointDriver driver;
     private AgvHitch hitch;
@@ -55,11 +47,6 @@ public class AgvLink : MonoBehaviour
 
     private string lastState = "";
     private bool eStopped;
-
-    private bool pullOutPending;
-    private bool doingPullOut;
-    private Vector3 pullOutForward;
-    private float pullOutYaw;
 
     private bool hasQueuedGoal;
     private string queuedWp;
@@ -152,11 +139,11 @@ public class AgvLink : MonoBehaviour
             return;
 
         // ROS는 ARRIVED를 받은 뒤 다음 goal을 보내는 순차 방식이다.
-        // 내부 이탈/대기 중 추가 명령으로 현재 목표를 덮어쓰지 않는다.
-        if (hasQueuedGoal || doingPullOut)
+        // 하차 대기 중 추가 명령으로 현재 목표를 덮어쓰지 않는다.
+        if (hasQueuedGoal)
         {
             Debug.LogWarning(
-                "[AgvLink] 이탈/하차 대기 처리 중: 중복 또는 추가 goal 무시",
+                "[AgvLink] 하차 대기 처리 중: 중복 또는 추가 goal 무시",
                 this
             );
             return;
@@ -243,8 +230,6 @@ public class AgvLink : MonoBehaviour
                 return;
             }
 
-            bool alreadyAttached = hitch.Towed != null;
-
             if (!hitch.Attach(out error))
             {
                 Debug.LogError(
@@ -254,19 +239,7 @@ public class AgvLink : MonoBehaviour
                 return;
             }
 
-            if (!alreadyAttached)
-            {
-                // 상차 당시 AGV의 전방 방향을 저장한다.
-                pullOutForward = transform.forward;
-                pullOutForward.y = 0f;
-                pullOutForward.Normalize();
-
-                pullOutYaw = transform.eulerAngles.y;
-                pullOutPending = pullOutDistanceM > 0f;
-            }
-
-            // 실제 연결은 즉시 보고한다.
-            // 다음 이동 명령을 받으면 먼저 직진한다.
+            // 이탈 경유점은 ROS가 YAML 경로로 보낸다.
             Publish("ATTACHED", wp);
         }
         else if (command == "detach")
@@ -301,7 +274,6 @@ public class AgvLink : MonoBehaviour
 
             // 분리했던 오브젝트를 기억해 실제 삭제 여부를 확인한다.
             releasedPallet = pallet;
-            pullOutPending = false;
 
             // 실제 분리는 즉시 보고한다.
             // 다음 HOME/DOCK 이동은 삭제 완료까지 보류한다.
@@ -318,7 +290,7 @@ public class AgvLink : MonoBehaviour
 
     void Update()
     {
-        if (eStopped || !hasQueuedGoal || doingPullOut)
+        if (eStopped || !hasQueuedGoal)
             return;
 
         if (releasedPallet == null)
@@ -343,32 +315,6 @@ public class AgvLink : MonoBehaviour
         if (!hasQueuedGoal || eStopped)
             return;
 
-        if (pullOutPending && hitch.Towed != null)
-        {
-            pullOutPending = false;
-            doingPullOut = true;
-
-            Vector3 exit =
-                transform.position
-                + pullOutForward * Mathf.Max(0f, pullOutDistanceM);
-
-            Publish("MOVING", queuedWp);
-
-            // 방향을 꺾지 않고 상차 당시 전방으로 먼저 이동한다.
-            driver.MoveTo(
-                PullOutWaypoint,
-                exit,
-                pullOutYaw
-            );
-
-            Debug.Log(
-                $"[AGV1] 상차 후 전방 {pullOutDistanceM:F2}m 직진 이탈",
-                this
-            );
-            return;
-        }
-
-        pullOutPending = false;
         StartDestination();
     }
 
@@ -379,7 +325,6 @@ public class AgvLink : MonoBehaviour
         float? yaw = queuedYaw;
 
         hasQueuedGoal = false;
-        doingPullOut = false;
 
         driver.MoveTo(wp, target, yaw);
         Publish("MOVING", wp);
@@ -389,20 +334,6 @@ public class AgvLink : MonoBehaviour
     {
         if (eStopped)
             return;
-
-        if (doingPullOut && wp == PullOutWaypoint)
-        {
-            Debug.Log(
-                "[AGV1] 직진 이탈 완료 → 원래 목표 경로로 이동",
-                this
-            );
-
-            StartDestination();
-
-            // 내부 경유점 도착은 ROS에 보고하지 않는다.
-            // 보고하면 ROS가 원래 목적지에 도착했다고 판단할 수 있다.
-            return;
-        }
 
         Publish("ARRIVED", wp);
     }
@@ -429,8 +360,6 @@ public class AgvLink : MonoBehaviour
     private void CancelPendingTravel()
     {
         hasQueuedGoal = false;
-        doingPullOut = false;
-        pullOutPending = false;
 
         clearanceElapsed = 0f;
         releasedPallet = null;

@@ -24,6 +24,7 @@ class AgvRoute:
         self.stops = stops
         self.route = route
         self.loaded = False       # 마지막으로 보고한 /agv_1_loaded
+        self.loaded_from = None   # 마지막으로 상차가 확인된 도킹 지점
         self.cmd = None           # 지금 수행 중인 /agv_1_cmd. 끝나면 None
         self.steps = []           # 남은 경로점들 (맨 끝이 최종 정지 지점)
         self.pending_hitch = None  # 경로 다 가면 보낼 hitch 명령 ('attach'/'detach'/None)
@@ -39,6 +40,10 @@ class AgvRoute:
 
         self.cmd = cmd
         via = self.route.get(ROUTE_KEY[cmd], [])
+        # 이탈 좌표는 YAML에만 둔다. 기존 YAML은 공통 to_final로 동작한다.
+        if cmd == FINAL and self.loaded_from in DOCKS:
+            key = f'to_final_from_{self.loaded_from.lower()}'
+            via = self.route.get(key, via)
         # Unity AgvLink는 좌표를 줘도 wp 이름이 없으면 무시한다. 경로점은 '<cmd>_via', 마지막은 cmd 이름 그대로.
         self.steps = [(f'{cmd}_via', p) for p in via] + [(cmd, self.stops[cmd])]
         self.pending_hitch = 'attach' if cmd in DOCKS else ('detach' if cmd == FINAL else None)
@@ -59,6 +64,7 @@ class AgvRoute:
         if self.cmd not in DOCKS:
             return None
         self.loaded = True
+        self.loaded_from = self.cmd
         return True
 
     def on_detached(self):
@@ -66,6 +72,7 @@ class AgvRoute:
         if self.cmd != FINAL:
             return None
         self.loaded = False
+        self.loaded_from = None
         return False
 
     def on_estop_cleared(self):
@@ -74,6 +81,7 @@ class AgvRoute:
         self.steps = []
         self.pending_hitch = None
         self.loaded = False
+        self.loaded_from = None
 
     def _next_goal(self):
         name, step = self.steps.pop(0)
