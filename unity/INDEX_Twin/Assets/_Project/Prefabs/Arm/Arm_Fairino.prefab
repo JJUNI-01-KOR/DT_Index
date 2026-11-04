@@ -2176,6 +2176,7 @@ MonoBehaviour:
   jointSpeedDegPerSec: 60
   minMoveTimeSec: 0.4
   arriveToleranceDeg: 0.5
+  rosBaseLink: {fileID: 2293319765324886157}
 --- !u!114 &549590745560030328
 MonoBehaviour:
   m_ObjectHideFlags: 0
