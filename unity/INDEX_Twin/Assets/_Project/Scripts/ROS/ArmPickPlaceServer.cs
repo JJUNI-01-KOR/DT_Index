@@ -5,10 +5,11 @@
 //   서비스: /arm_N_pick_place (factory_interfaces/PickPlace)
 //     요청: box_id (팔1은 빈 문자열), pick_pose · place_pose (ROS 좌표, 방석 바닥 중심. place_pose 방향의 yaw = 놓은 방석 방향)
 //     응답: success, message (성공: 방석 id. 실패: busy · E_STOP · no_cushion · ik_failed:<단계> · timeout)
-//     Unity 팔은 15초(Inspector) 안에 스스로 끝내므로 호출 쪽 제한 20초 안에 항상 응답한다.
-//   구독: RosBridge.FactoryStateChanged
+//     Unity 팔은 15초(Inspector) 안에 스스로 끝내므로 호출 쪽 제한 20초 안에 항상 응답한다 (고장 일시정지 시간은 빼고).
+//   구독: RosBridge.FactoryStateChanged, RosBridge.StatsReceived
 //     E_STOP         → 그 자리에서 멈추고 진행 중 요청에 success=false, message=E_STOP (FR-16 3번)
 //     E_STOP → IDLE  → 든 방석을 없애고 홈 자세로 (FR-16 5번)
+//     ERROR이고 fault가 이 팔(arm_N) → 그 자리에서 멈추고 응답 보류. 조치 완료로 RUNNING → 이어서 동작 (FR-19)
 //
 // 확인 (VM):
 //   ros2 service list | grep pick_place
@@ -47,6 +48,7 @@ public class ArmPickPlaceServer : MonoBehaviour
         {
             lastState = bridge.FactoryState;
             bridge.FactoryStateChanged += OnFactoryState;
+            bridge.StatsReceived += OnStats;
             if (lastState == "E_STOP") arm.EmergencyStop();
         }
         else
@@ -57,7 +59,11 @@ public class ArmPickPlaceServer : MonoBehaviour
 
     void OnDestroy()
     {
-        if (bridge != null) bridge.FactoryStateChanged -= OnFactoryState;
+        if (bridge != null)
+        {
+            bridge.FactoryStateChanged -= OnFactoryState;
+            bridge.StatsReceived -= OnStats;
+        }
     }
 
     Task<PickPlaceResponse> Handle(PickPlaceRequest req)
@@ -81,6 +87,16 @@ public class ArmPickPlaceServer : MonoBehaviour
         if (state == "E_STOP") arm.EmergencyStop();
         else if (lastState == "E_STOP" && state == "IDLE") arm.ResetAfterEStop();
         lastState = state;
+        UpdatePause();
+    }
+
+    void OnStats(string json) => UpdatePause();
+
+    /// <summary>ERROR이고 고장 장비(/factory/stats의 fault)가 이 팔이면 멈추고, 아니면 이어서 (FR-19)</summary>
+    void UpdatePause()
+    {
+        if (bridge.FactoryState == "ERROR" && bridge.CurrentFault == rig.ArmName) arm.Pause();
+        else arm.Resume();
     }
 
     /// <summary>ROS 방향 → Unity yaw(도). 방향을 안 채운 요청(0,0,0,0)이면 0</summary>

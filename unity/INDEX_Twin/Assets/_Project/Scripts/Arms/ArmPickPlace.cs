@@ -13,6 +13,8 @@
 //   - 시간 제한(timeoutSec, 기본 15초): 놓기 전에 넘으면 그 자리에서 멈추고, 든 방석을 집기 전 자리로 되돌리고, 홈으로 간 뒤 실패.
 //   - E_STOP: EmergencyStop()이면 그 자리에서 멈추고(방석은 든 채) 진행 중 요청을 실패(E_STOP).
 //     ResetAfterEStop()에서 든 방석을 없애고 홈으로 (FR-16 해제 초기화).
+//   - 고장(ERROR): Pause()면 그 자리에서 멈추고(방석은 든 채) 응답을 미룬다. Resume()이면 이어서 동작.
+//     멈춘 시간은 timeoutSec에서 뺀다 (FR-19).
 // 결과 메시지: 성공이면 방석 id. 실패면 busy · E_STOP · no_cushion · ik_failed:<단계> · timeout
 //
 // 11/01 A (팔1 투입, FR-02): feedBin(적재함)을 연결하면 box_id가 빈 요청은 pick_pose 대신
@@ -112,6 +114,8 @@ public class ArmPickPlace : MonoBehaviour
     private Action<bool, string> done;
     private bool eStopped;
     private bool timedOut;
+    private bool paused;        // 고장(ERROR) 일시정지. 응답은 미루고 그 자리에서 멈춘다
+    private float pausedSec;    // 이번 요청에서 멈춰 있던 시간. 시간 제한에서 뺀다
 
     // 시간 초과 때 방석 되돌리기
     private GameObject held;
@@ -379,7 +383,26 @@ public class ArmPickPlace : MonoBehaviour
 
         done = onDone;
         timedOut = false;
+        pausedSec = 0f;
         running = StartCoroutine(Sequence(cushion, rb, qPa, qP, qPo, qPr, qPt, qPf, qLa, qL));
+    }
+
+    public bool Paused => paused;
+
+    /// <summary>고장(ERROR) 일시정지: 그 자리에서 멈추고 진행 중인 요청의 응답을 미룬다 (FR-19)</summary>
+    public void Pause()
+    {
+        if (paused) return;
+        paused = true;
+        Debug.Log($"{Tag} 고장: 일시정지{(Busy ? " (요청 진행 중, 응답 보류)" : "")}", this);
+    }
+
+    /// <summary>조치 완료: 멈춘 자리에서 이어서 움직인다</summary>
+    public void Resume()
+    {
+        if (!paused) return;
+        paused = false;
+        Debug.Log($"{Tag} 조치 완료: 이어서 동작", this);
     }
 
     /// <summary>E_STOP: 그 자리에서 멈추고 진행 중인 요청을 E_STOP으로 끝낸다. 든 방석은 그대로 든다</summary>
@@ -396,6 +419,7 @@ public class ArmPickPlace : MonoBehaviour
     public void ResetAfterEStop()
     {
         eStopped = false;
+        paused = false;
         if (running != null) { StopCoroutine(running); running = null; }
         done = null;
         if (grip.IsHolding)
@@ -461,7 +485,17 @@ public class ArmPickPlace : MonoBehaviour
         float settled = 0f;
         while (true)
         {
-            if (t0 != float.MaxValue && Time.time - t0 > timeoutSec) { timedOut = true; yield break; }
+            if (paused)
+            {
+                Freeze();                               // 지금 각도로 고정 (방석은 든 채)
+                float start = Time.time;
+                while (paused) yield return null;
+                pausedSec += Time.time - start;
+                rig.SetJointTargets(q);                 // 멈춘 자리에서 원래 목표로 다시 출발
+                yield return new WaitForFixedUpdate();
+                settled = 0f;
+            }
+            if (t0 != float.MaxValue && Time.time - t0 - pausedSec > timeoutSec) { timedOut = true; yield break; }
             if (!rig.IsMoving) yield break;
             if (viaTolDeg > 0f && WithinTolerance(q, viaTolDeg)) yield break;
             settled = WithinTolerance(q) ? settled + Time.deltaTime : 0f;
