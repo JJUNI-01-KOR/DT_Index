@@ -11,6 +11,9 @@
 //
 // 같은 오브젝트에 ConveyorGroup이 있으면 그룹(구간 전체)을, 없으면 Conveyor 하나를 가동·정지한다.
 //
+// 11/05 BUG-003 (TC_DT_042): RosBridge.FactoryStateChanged 구독. E_STOP → IDLE([Clear])이면
+//   메인 라인·두 레인 위 방석을 모두 없앤다 (ConveyorLoad.ClearAll, FR-16 해제 초기화).
+//
 // 확인 (VM):
 //   ros2 topic echo /conveyor_1_load
 //   ros2 topic pub --once /conveyor/cmd std_msgs/msg/Bool "{data: true}"
@@ -29,6 +32,8 @@ public class ConveyorLink : MonoBehaviour
     [SerializeField] private float republishSec = 1.0f;
 
     private ROSConnection ros;
+    private RosBridge bridge;
+    private string lastState = "";
     private float lastSent = -999f;
 
     void Reset()
@@ -60,12 +65,34 @@ public class ConveyorLink : MonoBehaviour
         ros.Subscribe<BoolMsg>(TopicNames.ConveyorCmd, OnConveyorCmd);
 
         load.Changed += OnLoadChanged;
+
+        bridge = RosBridge.Instance;
+        if (bridge != null)
+        {
+            lastState = bridge.FactoryState;
+            bridge.FactoryStateChanged += OnFactoryState;
+        }
+        else
+        {
+            Debug.LogWarning("[컨베이어 연결] 씬에 RosBridge가 없어 E_STOP 해제 때 벨트 위 방석을 비우지 못함", this);
+        }
     }
 
     void OnDestroy()
     {
         if (load != null) load.Changed -= OnLoadChanged;
+        if (bridge != null) bridge.FactoryStateChanged -= OnFactoryState;
         if (ros != null) ros.Unsubscribe(TopicNames.ConveyorCmd);
+    }
+
+    void OnFactoryState(string state)
+    {
+        if (lastState == "E_STOP" && state == "IDLE")
+        {
+            int n = load.ClearAll();
+            Debug.Log($"[컨베이어 연결] E_STOP 해제 초기화: 벨트 위 방석 {n}개 삭제", this);
+        }
+        lastState = state;
     }
 
     void Update()

@@ -105,6 +105,22 @@ public class ConveyorLoad : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 메인 라인·두 레인 위 방석을 모두 없앤다 (FR-16 해제 초기화, 11/05 BUG-003). 없앤 개수를 돌려준다.
+    /// 지난 물리 프레임에 센 방석 기준이고, 팔이 들고 있는 방석은 건드리지 않는다. 레인 끝 칸·줄은 LaneEnd.ResetAll이 따로 비운다.
+    /// </summary>
+    public int ClearAll()
+    {
+        var all = new HashSet<Rigidbody>(mainSet);
+        all.UnionWith(okSet);
+        all.UnionWith(ngSet);
+        int n = 0;
+        foreach (var rb in all)
+            if (rb != null) { Destroy(rb.gameObject); n++; }
+        mainSet.Clear(); okSet.Clear(); ngSet.Clear();
+        return n;
+    }
+
     // ── 내부 ──
 
     void AddConveyors(Conveyor[] list, HashSet<Rigidbody> set)
