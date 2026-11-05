@@ -11,8 +11,16 @@ ALL_KEYS = {'state', 'fault', 'estop', 'bin_left', 'fed', 'ok', 'ng', 'last',
             'agv', 'agv_cycle_sec'}
 
 
-def test_counts_ok_and_ng():
+def fed(*ids):
+    """이번 회차에 ids를 투입한 Stats."""
     s = Stats()
+    for i in ids:
+        s.on_fed(i)
+    return s
+
+
+def test_counts_ok_and_ng():
+    s = fed('C001', 'C002', 'C003')
     s.on_graded('C001', 1.00, 'ok')
     s.on_graded('C002', 1.20, 'ng')
     s.on_graded('C003', 0.95, 'ok')
@@ -20,7 +28,7 @@ def test_counts_ok_and_ng():
 
 
 def test_last_is_latest():
-    s = Stats()
+    s = fed('C001', 'C002')
     s.on_graded('C001', 1.00, 'ok')
     s.on_graded('C002', 1.20, 'ng')
     assert s.last == {'id': 'C002', 'kg': 1.20, 'lane': 'ng'}
@@ -28,18 +36,53 @@ def test_last_is_latest():
 
 def test_no_weight_counts_as_ng():
     """무게가 없어 불량 처리된 방석도 불량 수에 들어간다 (FR-07 예외)."""
-    s = Stats()
+    s = fed('C001')
     s.on_graded('C001', None, 'ng')
     assert s.ng == 1 and s.last['kg'] is None
 
 
 def test_reset_clears():
     """E_STOP 해제 때 0으로 (SRS 6장)."""
-    s = Stats()
+    s = fed('C001')
     s.on_graded('C001', 1.00, 'ok')
     s.reset()
     assert (s.ok, s.ng, s.last) == (0, 0, None)
 
+
+def test_cushion_fed_before_reset_not_counted():
+    """Clear 전에 투입되고 Clear 뒤에 판정된 방석은 세지 않는다 (BUG-003: 투입 ≠ 정상 + 불량)."""
+    s = fed('C056')
+    s.reset()
+    assert s.on_graded('C056', 0.70, 'ng') is False
+    assert (s.fed, s.ok, s.ng, s.last) == (0, 0, 0, None)
+
+
+def test_graded_before_fed_counts_when_fed_arrives():
+    """판정이 투입 완료보다 먼저 오면 보류했다가 투입 완료 때 센다."""
+    s = Stats()
+    assert s.on_graded('C058', 1.00, 'ok') is False
+    assert (s.fed, s.ok) == (0, 0)
+    s.on_fed('C058')
+    assert (s.fed, s.ok, s.ng) == (1, 1, 0)
+    assert s.last == {'id': 'C058', 'kg': 1.00, 'lane': 'ok'}
+
+
+def test_never_fed_cushion_not_counted():
+    """투입 완료가 오지 않은 방석(놓고 물러나는 중 E_STOP)은 Clear 뒤 판정돼도 세지 않는다."""
+    s = Stats()
+    s.on_graded('C060', 1.00, 'ok')   # 보류
+    s.reset()                         # Clear: 보류도 버림
+    s.on_fed('C061')
+    assert (s.fed, s.ok, s.ng) == (1, 0, 0)
+
+
+def test_ids_restart_after_unity_restart():
+    """Unity를 다시 켜 id가 C001부터 다시 매겨져도 Clear 뒤 새 방석은 센다."""
+    s = fed('C001', 'C002')
+    s.reset()
+    s.on_fed('C001')
+    assert s.on_graded('C001', 1.00, 'ok') is True
+    assert (s.fed, s.ok, s.ng) == (1, 1, 0)
 
 def test_to_json_has_all_keys():
     """부록 A.4 키 15개(agv 안 3개 포함)가 전부 있다 (FR-20)."""
@@ -51,6 +94,7 @@ def test_to_json_has_all_keys():
 
 def test_to_json_maps_values():
     s = Stats()
+    s.on_fed('C001')
     s.on_graded('C001', 1.00, 'ok')
     pallets = PalletBook(capacity=1)
     pallets.on_placed(1)
@@ -62,7 +106,7 @@ def test_to_json_maps_values():
     assert data['fault'] is None
     assert data['estop'] == 'startup'
     assert data['bin_left'] == 7
-    assert (data['fed'], data['ok'], data['ng']) == (0, 1, 0)
+    assert (data['fed'], data['ok'], data['ng']) == (1, 1, 0)
     assert data['last'] == {'id': 'C001', 'kg': 1.00, 'lane': 'ok'}
     assert (data['main'], data['lane_ok'], data['lane_ng']) == (1, 2, 3)
     assert data['pallet_1'] == 1

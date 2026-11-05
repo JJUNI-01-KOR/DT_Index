@@ -236,7 +236,8 @@ class FactoryManager(Node):
         lane = self.grader.grade(kg)
         if kg is None:
             self.get_logger().warn(f'{cushion} 무게를 읽을 수 없어 불량 처리: {msg.data}')
-        self.stats.on_graded(cushion, kg, lane)
+        if not self.stats.on_graded(cushion, kg, lane):
+            self.get_logger().info(f'{cushion} 투입 완료 전 판정 → 투입 완료가 오면 통계에 반영 (Clear 전 방석이면 반영 안 함)')
         self.diverter_pub.publish(String(data=diverter_cmd(cushion, lane)))   # 판정 직후 바로 (NFR-01)
         self.get_logger().info(f'판정 {cushion} {kg} kg → {lane}')
         # (FR-08): 바로 /diverter_1_cmd {"id", "lane"} 방석당 1회 (NFR-01: 0.5초 이내)
@@ -381,7 +382,7 @@ class FactoryManager(Node):
         res = future.result()
         if res.success:
             self.get_logger().info(f'로봇팔1 투입 완료 {res.message}')
-            self.stats.fed += 1
+            self.stats.on_fed(res.message)
             if res.message not in self.graded:
                 self.feed_rule.on_fed(res.message)
                 self.watchdog.start_weight(self.now_sec())
