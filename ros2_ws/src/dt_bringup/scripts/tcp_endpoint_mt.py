@@ -20,7 +20,7 @@ THREADS = 16
 
 def main(args=None):
     rclpy.init(args=args)
-    server = TcpServer('UnityEndpoint')
+    server = TcpServer('ros_tcp_endpoint')   # launch에서 name을 주면 하위 노드까지 같은 이름이 되므로 여기서 정한다
     executor = MultiThreadedExecutor(num_threads=THREADS)
     executor.add_node(server)
     server.executor = executor        # Unity가 붙어 토픽을 등록하면 TcpServer가 이 executor에 노드를 더한다
