@@ -126,8 +126,8 @@ public class ControlPanel : MonoBehaviour
 
         if (statusText != null)
         {
-            string s = !linked ? "ROS2  disconnected"
-                : lost ? "ROS2  LOST (no heartbeat 3s) -> E_STOP"
+            string s = lost ? "ROS2  LOST (no heartbeat 3s) -> E_STOP"   // 11/05 BUG-002: 배너와 같은 순서
+                : !linked ? "ROS2  disconnected"
                 : $"ROS2  connected · {(state == "" ? "waiting for state" : state)}";
             if (s != shownStatus)
             {

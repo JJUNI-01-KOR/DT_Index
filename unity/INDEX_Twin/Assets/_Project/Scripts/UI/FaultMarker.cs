@@ -4,6 +4,7 @@
 //   arm_1 ~ arm_3: 그 로봇팔 위, conveyor: 컨베이어 전체의 가운데 위
 // 아이콘을 클릭하면 오른쪽에 [Fix]가 펼쳐진다 (다시 클릭하면 접힘). [Fix]를 3초 누르면 /factory/fault_clear(장비 id).
 // 새 고장이 되면 접힌 상태로 시작한다. 상태 패널의 [Fix]와 같은 일을 한다 (둘 중 아무거나 써도 됨).
+// 11/05 BUG-001 (TC_DT_037): 아이콘 자체를 3초 눌러도 [Fix]와 같은 일을 한다. 누르는 동안 [Fix]가 펼쳐져 남은 시간을 보여 준다.
 // 아이콘: Resources/UI/FaultWarning (Sprite). 없으면 노란 네모 + "!"
 // 장비가 카메라 뒤에 있으면 숨긴다.
 
@@ -30,6 +31,8 @@ public class FaultMarker : MonoBehaviour
     private Button fixButton;
     private HoldButton fixHold;
     private TMP_Text fixLabel;
+    private HoldButton iconHold;
+    private bool iconHoldUsed;   // 아이콘을 길게 누른 뒤 손을 뗄 때 오는 클릭은 접기/펼치기로 쓰지 않는다
     private string current = "";
     private bool expanded;
 
@@ -79,7 +82,9 @@ public class FaultMarker : MonoBehaviour
         }
         iconButton = go.GetComponent<Button>();
         iconButton.targetGraphic = image;
-        iconButton.onClick.AddListener(() => expanded = !expanded);
+        iconButton.onClick.AddListener(OnIconClick);
+        iconHold = go.AddComponent<HoldButton>();
+        iconHold.Completed += OnHeld;
         markerGroup = go.GetComponent<CanvasGroup>();
 
         // [Fix] (아이콘 오른쪽, 3초 누르기)
@@ -105,6 +110,13 @@ public class FaultMarker : MonoBehaviour
     void OnDestroy()
     {
         if (fixHold != null) fixHold.Completed -= OnHeld;
+        if (iconHold != null) iconHold.Completed -= OnHeld;
+    }
+
+    void OnIconClick()
+    {
+        if (iconHoldUsed) { iconHoldUsed = false; return; }
+        expanded = !expanded;
     }
 
     void Update()
@@ -116,10 +128,16 @@ public class FaultMarker : MonoBehaviour
         {
             current = fault;
             expanded = false;                      // 새 고장은 접힌 상태로 시작
+            iconHoldUsed = false;
         }
+        // 아이콘을 0.3초 넘게 누르고 있으면 [Fix]를 펼쳐 남은 시간을 보여 준다
+        if (iconHold.Holding && iconHold.Remaining < 2.7f) { expanded = true; iconHoldUsed = true; }
         bool show = current != "" && TryHead(current, out Vector3 head) && Place(head);
         Show(show, show && expanded);
-        if (show && expanded) fixLabel.text = fixHold.Holding ? $"{fixHold.Remaining:F1}s" : "Fix";
+        if (show && expanded)
+            fixLabel.text = fixHold.Holding ? $"{fixHold.Remaining:F1}s"
+                : iconHold.Holding ? $"{iconHold.Remaining:F1}s"
+                : "Fix";
     }
 
     /// <summary>숨겨도 오브젝트는 켜 둔다 (HoldButton이 꺼진 버튼을 보고 누르기를 처음부터로 돌리게)</summary>
