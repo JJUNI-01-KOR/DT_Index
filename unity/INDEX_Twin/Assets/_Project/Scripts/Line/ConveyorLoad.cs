@@ -19,6 +19,11 @@
 // 11/02 A: 레인 끝 칸(1번 집는 자리 + 2번 대기) 중 찬 칸 수 OkEnd·NgEnd (0~2)도 센다.
 //   /conveyor_1_load에 ok_end·ng_end로 같이 보내고, factory_manager는 어느 한쪽이라도 칸이 다 차면
 //   컨베이어를 멈추고(/conveyor/cmd false, 상태는 RUNNING 유지) 팔1 투입도 멈춘다. 칸이 비면 다시 돈다.
+//
+// 11/05 (BUG-003): ClearLine() — E_STOP 해제 초기화 때 적재함 밖의 방석을 모두 없앤다 (FR-16 6번 "적재함 남은 수만 유지").
+//   예전에는 레인 끝 칸·파레트·AGV 위 방석만 지워서, 벨트 위 방석(판정 끝난 방석 포함)이 Clear 뒤 파레트에 쌓였다
+//   → 정상 수 < 파레트 적재 수. 팔이 들고 있는 방석은 ArmPickPlace.ResetAfterEStop이 지운다.
+//   ConveyorLink가 E_STOP → IDLE에서 부른다.
 
 using System;
 using System.Collections.Generic;
@@ -103,6 +108,24 @@ public class ConveyorLoad : MonoBehaviour
             Main = m; Ok = o; Ng = n; OkEnd = oe; NgEnd = ne;
             Changed?.Invoke(m, o, n);
         }
+    }
+
+    /// <summary>
+    /// E_STOP 해제 초기화 (FR-16): 적재함에 있지 않고 팔이 들고 있지 않은 방석을 모두 없앤다.
+    /// 메인 라인·분기 칸·두 레인·벨트 사이·바닥에 떨어진 방석이 모두 대상. 지운 수를 돌려준다
+    /// </summary>
+    public int ClearLine()
+    {
+        int n = 0;
+        foreach (var c in FindObjectsByType<Cushion>())
+        {
+            if (c == null || c.Location == CushionLocation.Bin) continue;
+            if (c.Body != null && IsHeld(c.Body)) continue;
+            Destroy(c.gameObject);
+            n++;
+        }
+        if (n > 0) Debug.Log($"[방석 수] 해제 초기화: 적재함 밖 방석 {n}개 삭제", this);
+        return n;
     }
 
     // ── 내부 ──
