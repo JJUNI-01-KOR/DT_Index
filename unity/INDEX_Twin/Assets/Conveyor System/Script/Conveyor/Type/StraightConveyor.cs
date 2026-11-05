@@ -17,7 +17,9 @@ namespace ConveyorSystem
         {
             ConveyorType = ConveyorType.Straight;
             // If there are no points, create them by default
+#if UNITY_EDITOR
             CreateDefaultPoints();
+#endif
         }
 
         /// <summary>
