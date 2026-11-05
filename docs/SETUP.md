@@ -1,7 +1,7 @@
 # 개발 환경 초기 세팅 (Windows + Unity / Ubuntu VM + ROS2)
 
 > 대상: 팀원 4명 모두 · 소요: 약 2~3시간 (대부분 다운로드 대기)
-> 기준: SRS v2.0 — Unity 6 + URP (Windows), ROS2 Humble (Ubuntu 22.04), ROS-TCP v0.7.0, 포트 10000
+> 기준: SRS v3.4 — Unity 6 (6000.6.0f1) + URP (Windows), ROS2 Humble (Ubuntu 22.04), ROS-TCP v0.7.0, 포트 10000 · 최종 확인 2026.11.05 (develop `7b7e73e`)
 
 ## 목표 구성
 
@@ -36,7 +36,7 @@
 | 4 | Git·SSH 설정, 저장소 클론, 빌드 | VM + Windows | 15분 |
 | 5 | 연결 테스트 | 둘 다 | 10분 |
 
-> **팀 저장소(chore #1)가 올라오기 전에도** 0~3단계와 5단계의 "빈 프로젝트 테스트"는 지금 바로 할 수 있다.
+> 팀 저장소 없이 연결만 확인하려면 5-A "빈 프로젝트 테스트"를, 팀 저장소로 확인하려면 5-B를 한다.
 
 ---
 
@@ -310,9 +310,9 @@ ros2 run ros_tcp_endpoint default_server_endpoint --ros-args -p ROS_IP:=0.0.0.0
 | Unity → ROS | VM 새 터미널: `ros2 topic echo /unity_ping` | `hello from Unity 0, 1, 2...` |
 | ROS → Unity | `ros2 topic pub --once /conveyor/cmd std_msgs/msg/Bool "{data: true}"` | Unity Console에 `conveyor cmd = True` |
 
-> Endpoint는 VM 안에서 따로 클론해 빌드해도 되고, 팀 저장소가 나온 뒤에는 4-1 과정으로 대체된다.
+> 팀 저장소로 작업할 때는 4-1 과정으로 받은 Endpoint를 `dt_bringup` launch로 띄운다 (5-B).
 
-### 5-B. 팀 프로젝트로 테스트 (chore #1 이후)
+### 5-B. 팀 프로젝트로 테스트
 
 먼저 Unity → **Robotics → ROS Settings** → ROS IP Address에 **내 VM IP**를 적는다.
 (이 값은 skip-worktree 덕분에 Git에 올라가지 않는다. `git status`에 `ROSConnectionPrefab.prefab`이 안 보이면 정상)
@@ -322,26 +322,31 @@ ros2 run ros_tcp_endpoint default_server_endpoint --ros-args -p ROS_IP:=0.0.0.0
 | 1 | VM | `ros2 launch dt_bringup connect.launch.py` | `Starting server on 0.0.0.0:10000` |
 | 2 | Unity | `Assets/_Project/Scenes/Sandbox/ConnectionTest` 씬 Play | HUD 화살표 파란색 |
 | 3 | VM | `ros2 topic echo /unity_ping` | `ping 1, 2, 3...` |
-| 4 | VM | `ros2 topic echo /detect_1_event` | `zone: reject`, `position: x 3, y -1, z 2` (커스텀 메시지 + 좌표 변환) |
-| 5 | VM | `ros2 topic pub --once /conveyor/cmd std_msgs/msg/Bool "{data: true}"` | Unity Console에 `= True` |
+| 4 | VM | `ros2 topic pub --once /conveyor/cmd std_msgs/msg/Bool "{data: true}"` | Unity Console에 `= True` |
 
-5개 모두 통과하면 단톡에 캡처를 올리고 체크리스트 5-B에 표시한다.
+4개 모두 통과하면 연결 세팅은 끝이다. 전체 공정 실행은 루트 [README.md](../README.md)의 "빠른 시작"을 따른다.
+
+```bash
+ros2 launch dt_bringup factory.launch.py                 # VM: 전체 시연 (Unity Main 씬 Play → [Clear] → [Start])
+ros2 launch dt_description factory_display.launch.py     # VM: (선택) RViz 표시
+```
+launch는 창을 닫지 말고 `Ctrl+C`로 끈다. 창을 닫으면 Endpoint가 포트 10000을 쥔 채 남을 수 있다.
 
 ---
 
-## 6. D가 1번만 하는 일 (팀 저장소 준비)
+## 6. D가 1번만 한 일 (팀 저장소 준비, 10/28 완료)
 
-다른 팀원은 클론만 하면 되도록 D가 미리 커밋한다.
+다른 팀원은 클론만 하면 되도록 D가 미리 커밋했다. 저장소를 새로 만들 때 참고한다.
 
-- [ ] Unity 버전 확정 후 공지, 프로젝트 생성 (`unity/INDEX_Twin`, URP)
-- [ ] Project Settings → Editor: **Asset Serialization = Force Text**, **Version Control = Visible Meta Files**
-- [ ] Package Manager: ROS-TCP-Connector v0.7.0, URDF Importer v0.5.2 추가 → `Packages/manifest.json` 커밋
-- [ ] ROS Settings: ROS2 / **D의 VM IP** / 10000 → **처음 1번만** 커밋 (값은 무엇이든 상관없음. 파일이 저장소에 있어야 skip-worktree를 걸 수 있고, 팀원은 각자 자기 IP로 덮어씀)
-- [ ] 커밋 후 `bash scripts/setup-git-hooks.sh` → 이후 내 VM IP를 적어도 Git에 안 올라감
-- [ ] Robotics → Generate ROS Messages → `ros2_ws/src/factory_interfaces` 선택 → Build → `Assets/RosMessages/` 커밋
-- [ ] `.gitignore` (Unity `Library/ Temp/ Logs/ UserSettings/`, ROS `build/ install/ log/`, `ROS-TCP-Endpoint/`, `Assets/ThirdParty/`)
-- [ ] `.gitattributes` (LFS: `*.fbx *.png *.psd *.wav *.stl *.dae` 등, `* text=auto`)
-- [ ] `scripts/setup-git-hooks.sh`, `docs/` 문서
+- [x] Unity 버전 확정 후 공지, 프로젝트 생성 (`unity/INDEX_Twin`, URP)
+- [x] Project Settings → Editor: **Asset Serialization = Force Text**, **Version Control = Visible Meta Files**
+- [x] Package Manager: ROS-TCP-Connector v0.7.0, URDF Importer v0.5.2 추가 → `Packages/manifest.json` 커밋
+- [x] ROS Settings: ROS2 / **D의 VM IP** / 10000 → **처음 1번만** 커밋 (값은 무엇이든 상관없음. 파일이 저장소에 있어야 skip-worktree를 걸 수 있고, 팀원은 각자 자기 IP로 덮어씀)
+- [x] 커밋 후 `bash scripts/setup-git-hooks.sh` → 이후 내 VM IP를 적어도 Git에 안 올라감
+- [x] Robotics → Generate ROS Messages → `ros2_ws/src/factory_interfaces` 선택 → Build → `Assets/RosMessages/` 커밋
+- [x] `.gitignore` (Unity `Library/ Temp/ Logs/ UserSettings/`, ROS `build/ install/ log/`, `ROS-TCP-Endpoint/`, `Assets/ThirdParty/`)
+- [x] `.gitattributes` (LFS: `*.fbx *.png *.psd *.wav *.stl *.dae` 등, `* text=auto`)
+- [x] `scripts/setup-git-hooks.sh`, `docs/` 문서
 
 ---
 
@@ -355,7 +360,8 @@ ros2 run ros_tcp_endpoint default_server_endpoint --ros-args -p ROS_IP:=0.0.0.0
 | 학교 와이파이에서 브리지가 안 됨 | 일부 와이파이는 기기당 1개 주소만 허용 | 랜선 연결 또는 팀 공유기 사용 |
 | `git status`에 `ROSConnectionPrefab.prefab`이 보임 | skip-worktree 미적용 | `bash scripts/setup-git-hooks.sh` 다시 실행 |
 | pull 했더니 `ROSConnectionPrefab.prefab` 때문에 에러 | 누군가 이 파일을 커밋함 | 단톡에 알림 → 아래 "skip-worktree 풀고 받기" 참고 |
-| `Bool`은 되는데 `DetectEvent`만 안 넘어감 | Endpoint를 띄운 터미널에서 워크스페이스를 source 안 함 | `source ~/dev/DT_Index/ros2_ws/install/setup.bash` 후 Endpoint 재실행 |
+| `Bool`은 되는데 `PickPlace` 서비스만 안 됨 | Endpoint를 띄운 터미널에서 워크스페이스를 source 안 함 | `source ~/dev/DT_Index/ros2_ws/install/setup.bash` 후 launch 다시 실행 |
+| launch를 다시 켜니 `Address already in use` (10000) | 이전 launch 창을 닫아 Endpoint가 남음 | `pkill -f tcp_endpoint_mt` 후 다시 실행. 끌 때는 `Ctrl+C` |
 | `ros2 topic list`에 다른 사람 노드가 보임 | `ROS_LOCALHOST_ONLY` 미설정 (브리지라서 옆 VM이 보임) | `.bashrc`에 `export ROS_LOCALHOST_ONLY=1` → 새 터미널 |
 | VM이 매우 느림, 상태 표시줄에 **거북이 아이콘** | Windows Hyper-V 위에서 실행 중 | Windows 기능에서 "Hyper-V", "가상 머신 플랫폼" 끄기 → 재부팅 (WSL2·Docker도 같이 꺼짐) |
 | Unity가 "Upgrade project?" | 에디터 버전 불일치 | 취소 → 팀 고정 버전 설치 후 열기 |
