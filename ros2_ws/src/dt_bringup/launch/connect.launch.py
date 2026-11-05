@@ -16,8 +16,7 @@ def generate_launch_description():
                               description='ROS-TCP-Endpoint 포트 (Unity ROS Settings의 Port와 같게)'),
         Node(
             package='dt_bringup',              # 스레드 여러 개 버전 (scripts/tcp_endpoint_mt.py)
-            executable='tcp_endpoint_mt.py',
-            name='ros_tcp_endpoint',
+            executable='tcp_endpoint_mt.py',      # name 없음: 이유는 factory.launch.py 참고
             parameters=[{'ROS_IP': '0.0.0.0', 'ROS_TCP_PORT': port}],
             output='screen',
             emulate_tty=True,
