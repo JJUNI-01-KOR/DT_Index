@@ -36,7 +36,7 @@ public class BinLink : MonoBehaviour
         if (bin == null) { Debug.LogError("[BinLink] CushionBin이 연결되지 않음", this); enabled = false; return; }
 
         ros = ROSConnection.GetOrCreateInstance();
-        ros.RegisterPublisher<Int32Msg>(TopicNames.BinCount);
+        ros.RegisterPublisher(TopicNames.BinCount, Int32Msg.k_RosMessageName); // 빌드에선 Awake 때 메시지 이름 등록 전이라 <Int32Msg>로는 이름이 비어 등록 실패
         bin.CountChanged += OnCountChanged; // CushionBin.Start에서 채우기 전에 구독해야 첫 값(20)도 바로 나감
     }
 
@@ -67,7 +67,7 @@ public class BinLink : MonoBehaviour
         catch (System.Exception)
         {
             // 연결이 끊겼다 다시 붙으면서 발행 등록이 사라진 경우: 다시 등록하고 한 번 더
-            ros.RegisterPublisher<Int32Msg>(TopicNames.BinCount);
+            ros.RegisterPublisher(TopicNames.BinCount, Int32Msg.k_RosMessageName); // 빌드에선 Awake 때 메시지 이름 등록 전이라 <Int32Msg>로는 이름이 비어 등록 실패
             ros.Publish(TopicNames.BinCount, msg);
         }
     }
