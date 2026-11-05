@@ -7,6 +7,8 @@
 - 기간: 2026.10.28 ~ 11.05 · 팀 INDEX 4명
 - 기준 문서: SRS v3.4, WBS v3.7, QA 시트 v2.0
 
+https://github.com/user-attachments/assets/7caddeba-a958-45bf-a272-fe9cb9af03b2
+
 ![RViz에서 본 공장 배치](ros2_ws/src/dt_description/tools/layout_preview.png)
 
 ## 공정 흐름
