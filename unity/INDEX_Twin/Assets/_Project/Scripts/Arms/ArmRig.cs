@@ -360,6 +360,11 @@ public class ArmRig : MonoBehaviour
         if (ros == null || rosBaseLink == null)
             return;
 
+        // 11/05 BUG-007: 끊겨 있는 동안 보내면 큐에 쌓였다가 다시 붙을 때 발행 등록보다 먼저 도착해
+        //   endpoint가 "Not registered to publish topic"을 낸다. 연결돼 있을 때만 보낸다 (주기 발행이라 놓쳐도 다음 주기에 나감)
+        if (!ros.HasConnectionThread || ros.HasConnectionError)
+            return;
+
         if (!HasValidJoints() ||
             joints.Any(j => j.jointPosition.dofCount == 0))
         {
