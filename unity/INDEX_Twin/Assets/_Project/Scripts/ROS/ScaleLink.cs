@@ -42,6 +42,13 @@ public class ScaleLink : MonoBehaviour
 
     void OnScanned(ItemSort sort, float kg)
     {
+        // 11/05 BUG-008 (TC_DT_043): Inspector에서 ScaleLink를 끄면(무게 센서 고장 흉내) 무게를 보내지 않는다.
+        //   이벤트 구독은 enabled와 상관없이 살아 있어서 따로 확인해야 함
+        if (!enabled)
+        {
+            Debug.Log($"[무게 연결] ScaleLink가 꺼져 있어 {sort.name} 무게를 보내지 않음", this);
+            return;
+        }
         var cushion = sort.GetComponent<Cushion>();
         if (cushion == null || string.IsNullOrEmpty(cushion.CushionId))
         {

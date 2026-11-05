@@ -64,8 +64,10 @@ public class StatusBanner : MonoBehaviour
     {
         text = null; color = Grey; urgent = false;
         var bridge = RosBridge.Instance;
+        // 11/05 BUG-002: 연결됐다가 끊기면(Heartbeat 3초) TCP도 같이 끊겨 Connected가 false가 되므로 RosLost를 먼저 본다.
+        //   한 번도 연결 안 된 경우(RosLost는 첫 수신 전에는 false)만 "ROS2 disconnected" (TC_DT_003 · TC_DT_041)
+        if (bridge != null && bridge.RosLost) { text = "ROS2 LOST - no heartbeat 3 s -> E-STOP"; color = Red; urgent = true; return; }
         if (bridge == null || !bridge.Connected) { text = "ROS2 disconnected"; return; }
-        if (bridge.RosLost) { text = "ROS2 LOST - no heartbeat 3 s -> E-STOP"; color = Red; urgent = true; return; }
 
         string state = bridge.FactoryState;
         if (state == "E_STOP")

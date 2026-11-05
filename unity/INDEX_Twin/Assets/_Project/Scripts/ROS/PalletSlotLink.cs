@@ -57,6 +57,9 @@ public class PalletSlotLink : MonoBehaviour
     {
         timer = 0f;
         if (ros == null) return;
+        // 11/05 BUG-007: 끊겨 있으면 보내지 않는다 (큐에 쌓였다가 재연결 때 발행 등록보다 먼저 도착 → "Not registered").
+        //   1초마다 다시 보내므로 연결되면 바로 현재 상태가 나간다
+        if (!ros.HasConnectionThread || ros.HasConnectionError) return;
         string s = slot.State.ToString();
         ros.Publish(topic, new StringMsg(s));
         if (changed) Debug.Log($"[Unity→ROS] {topic} {s}", this);

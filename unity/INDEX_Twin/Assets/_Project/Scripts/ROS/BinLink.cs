@@ -10,6 +10,9 @@
 //   - ROS와 연결이 안 됐으면 보내지 않는다 (1초마다 다시 시도하니까 연결되면 바로 나감)
 //   - 끊겼다 붙으면서 발행 등록이 사라졌으면 다시 등록한다
 //
+// 11/05 BUG-003 (TC_DT_042): RosBridge.FactoryStateChanged 구독. E_STOP → IDLE([Clear])이면
+//   적재함이 덜 찼을 때 다시 가득 채운다 (CushionBin.Fill, FR-16 해제 초기화). 바뀐 값은 CountChanged로 바로 나감
+//
 // 확인 (VM):
 //   ros2 topic hz /bin/count     ← 값이 안 바뀌어도 약 1 Hz
 //   factory_manager를 Ctrl+C 했다가 다시 켜기 → 1초 안에 적재함 수를 받고 투입 시작
@@ -26,9 +29,29 @@ public class BinLink : MonoBehaviour
     [SerializeField] private float republishSec = 1.0f;
 
     private ROSConnection ros;
+    private RosBridge bridge;
+    private string lastState = "";
     private float lastSent = -999f;
 
     void Reset() => bin = GetComponent<CushionBin>();
+
+    void Start()
+    {
+        bridge = RosBridge.Instance;
+        if (bridge == null) { Debug.LogWarning("[BinLink] 씬에 RosBridge가 없어 E_STOP 해제 때 적재함을 다시 채우지 못함", this); return; }
+        lastState = bridge.FactoryState;
+        bridge.FactoryStateChanged += OnFactoryState;
+    }
+
+    void OnFactoryState(string state)
+    {
+        if (lastState == "E_STOP" && state == "IDLE" && bin != null && bin.Count < bin.Capacity)
+        {
+            Debug.Log($"[BinLink] E_STOP 해제 초기화: 적재함 {bin.Count} → {bin.Capacity}개로 다시 채움", this);
+            bin.Fill();
+        }
+        lastState = state;
+    }
 
     void Awake()
     {
@@ -43,6 +66,7 @@ public class BinLink : MonoBehaviour
     void OnDestroy()
     {
         if (bin != null) bin.CountChanged -= OnCountChanged;
+        if (bridge != null) bridge.FactoryStateChanged -= OnFactoryState;
     }
 
     void Update()
