@@ -1,0 +1,476 @@
+Panels:
+- Class: rviz_common/Displays
+  Help Height: 70
+  Name: Displays
+  Property Tree Widget:
+    Expanded:
+    - /Status1
+    Splitter Ratio: 0.5
+  Tree Height: 550
+- Class: rviz_common/Views
+  Expanded:
+  - /Current View1
+  Name: Views
+  Splitter Ratio: 0.5
+Visualization Manager:
+  Class: ''
+  Displays:
+  - Alpha: 0.5
+    Cell Size: 1
+    Class: rviz_default_plugins/Grid
+    Color: 160; 160; 164
+    Enabled: true
+    Line Style:
+      Line Width: 0.029999999329447746
+      Value: Lines
+    Name: Grid
+    Normal Cell Count: 0
+    Offset:
+      X: 0
+      Y: 10
+      Z: 0
+    Plane: XY
+    Plane Cell Count: 44
+    Reference Frame: <Fixed Frame>
+    Value: true
+  - Class: rviz_default_plugins/TF
+    Enabled: true
+    Frame Timeout: 15
+    Frames:
+      All Enabled: false
+      agv_1_body:
+        Value: true
+      agv_1_eye:
+        Value: true
+      agv_1_link:
+        Value: true
+      agv_1_tail:
+        Value: true
+      agv_1_track_l:
+        Value: true
+      agv_1_track_r:
+        Value: true
+      agv_1_wheel_l_back:
+        Value: true
+      agv_1_wheel_l_front:
+        Value: true
+      agv_1_wheel_r_back:
+        Value: true
+      agv_1_wheel_r_front:
+        Value: true
+      arm_1/base_link:
+        Value: true
+      arm_1/forearm_link:
+        Value: true
+      arm_1/shoulder_link:
+        Value: true
+      arm_1/upperarm_link:
+        Value: true
+      arm_1/wrist1_link:
+        Value: true
+      arm_1/wrist2_link:
+        Value: true
+      arm_1/wrist3_link:
+        Value: true
+      arm_2/base_link:
+        Value: true
+      arm_2/forearm_link:
+        Value: true
+      arm_2/shoulder_link:
+        Value: true
+      arm_2/upperarm_link:
+        Value: true
+      arm_2/wrist1_link:
+        Value: true
+      arm_2/wrist2_link:
+        Value: true
+      arm_2/wrist3_link:
+        Value: true
+      arm_3/base_link:
+        Value: true
+      arm_3/forearm_link:
+        Value: true
+      arm_3/shoulder_link:
+        Value: true
+      arm_3/upperarm_link:
+        Value: true
+      arm_3/wrist1_link:
+        Value: true
+      arm_3/wrist2_link:
+        Value: true
+      arm_3/wrist3_link:
+        Value: true
+      map:
+        Value: true
+    Marker Scale: 0.6000000238418579
+    Name: TF
+    Show Arrows: false
+    Show Axes: true
+    Show Names: false
+    Tree:
+      map:
+        agv_1_link:
+          agv_1_body:
+            agv_1_eye: {}
+            agv_1_tail: {}
+          agv_1_track_l: {}
+          agv_1_track_r: {}
+          agv_1_wheel_l_back: {}
+          agv_1_wheel_l_front: {}
+          agv_1_wheel_r_back: {}
+          agv_1_wheel_r_front: {}
+        arm_1/base_link:
+          arm_1/shoulder_link:
+            arm_1/upperarm_link:
+              arm_1/forearm_link:
+                arm_1/wrist1_link:
+                  arm_1/wrist2_link:
+                    arm_1/wrist3_link: {}
+        arm_2/base_link:
+          arm_2/shoulder_link:
+            arm_2/upperarm_link:
+              arm_2/forearm_link:
+                arm_2/wrist1_link:
+                  arm_2/wrist2_link:
+                    arm_2/wrist3_link: {}
+        arm_3/base_link:
+          arm_3/shoulder_link:
+            arm_3/upperarm_link:
+              arm_3/forearm_link:
+                arm_3/wrist1_link:
+                  arm_3/wrist2_link:
+                    arm_3/wrist3_link: {}
+    Update Interval: 0
+    Value: true
+  - Class: rviz_default_plugins/MarkerArray
+    Enabled: true
+    Name: Factory Layout
+    Namespaces:
+      agv_route: true
+      agv_stop: true
+      arm: true
+      bin: true
+      conveyor: true
+      final_zone: true
+      label: true
+      pallet_slot: true
+      pick: true
+      sensor: true
+    Topic:
+      Depth: 5
+      Durability Policy: Transient Local
+      History Policy: Keep Last
+      Reliability Policy: Reliable
+      Value: /factory_layout
+    Value: true
+  - Alpha: 1
+    Class: rviz_default_plugins/RobotModel
+    Collision Enabled: false
+    Description File: ''
+    Description Source: Topic
+    Description Topic:
+      Depth: 5
+      Durability Policy: Transient Local
+      History Policy: Keep Last
+      Reliability Policy: Reliable
+      Value: /agv_1_description
+    Enabled: true
+    Links:
+      All Links Enabled: true
+      Expand Joint Details: false
+      Expand Link Details: false
+      Expand Tree: false
+      Link Tree Style: Links in Alphabetic Order
+      agv_1_body:
+        Alpha: 1
+        Show Axes: false
+        Show Trail: false
+        Value: true
+      agv_1_eye:
+        Alpha: 1
+        Show Axes: false
+        Show Trail: false
+        Value: true
+      agv_1_link:
+        Alpha: 1
+        Show Axes: false
+        Show Trail: false
+      agv_1_tail:
+        Alpha: 1
+        Show Axes: false
+        Show Trail: false
+        Value: true
+      agv_1_track_l:
+        Alpha: 1
+        Show Axes: false
+        Show Trail: false
+        Value: true
+      agv_1_track_r:
+        Alpha: 1
+        Show Axes: false
+        Show Trail: false
+        Value: true
+      agv_1_wheel_l_back:
+        Alpha: 1
+        Show Axes: false
+        Show Trail: false
+        Value: true
+      agv_1_wheel_l_front:
+        Alpha: 1
+        Show Axes: false
+        Show Trail: false
+        Value: true
+      agv_1_wheel_r_back:
+        Alpha: 1
+        Show Axes: false
+        Show Trail: false
+        Value: true
+      agv_1_wheel_r_front:
+        Alpha: 1
+        Show Axes: false
+        Show Trail: false
+        Value: true
+    Mass Properties:
+      Inertia: false
+      Mass: false
+    Name: AGV1
+    TF Prefix: ''
+    Update Interval: 0
+    Value: true
+    Visual Enabled: true
+  - Alpha: 1
+    Class: rviz_default_plugins/RobotModel
+    Collision Enabled: false
+    Description File: ''
+    Description Source: Topic
+    Description Topic:
+      Depth: 5
+      Durability Policy: Volatile
+      History Policy: Keep Last
+      Reliability Policy: Reliable
+      Value: /arm_1_description
+    Enabled: true
+    Links:
+      All Links Enabled: true
+      Expand Joint Details: false
+      Expand Link Details: false
+      Expand Tree: false
+      Link Tree Style: Links in Alphabetic Order
+      base_link:
+        Alpha: 1
+        Show Axes: false
+        Show Trail: false
+        Value: true
+      forearm_link:
+        Alpha: 1
+        Show Axes: false
+        Show Trail: false
+        Value: true
+      shoulder_link:
+        Alpha: 1
+        Show Axes: false
+        Show Trail: false
+        Value: true
+      upperarm_link:
+        Alpha: 1
+        Show Axes: false
+        Show Trail: false
+        Value: true
+      wrist1_link:
+        Alpha: 1
+        Show Axes: false
+        Show Trail: false
+        Value: true
+      wrist2_link:
+        Alpha: 1
+        Show Axes: false
+        Show Trail: false
+        Value: true
+      wrist3_link:
+        Alpha: 1
+        Show Axes: false
+        Show Trail: false
+        Value: true
+    Mass Properties:
+      Inertia: false
+      Mass: false
+    Name: arm_1
+    TF Prefix: arm_1
+    Update Interval: 0
+    Value: true
+    Visual Enabled: true
+  - Alpha: 1
+    Class: rviz_default_plugins/RobotModel
+    Collision Enabled: false
+    Description File: ''
+    Description Source: Topic
+    Description Topic:
+      Depth: 5
+      Durability Policy: Volatile
+      History Policy: Keep Last
+      Reliability Policy: Reliable
+      Value: /arm_2_description
+    Enabled: true
+    Links:
+      All Links Enabled: true
+      Expand Joint Details: false
+      Expand Link Details: false
+      Expand Tree: false
+      Link Tree Style: Links in Alphabetic Order
+      base_link:
+        Alpha: 1
+        Show Axes: false
+        Show Trail: false
+        Value: true
+      forearm_link:
+        Alpha: 1
+        Show Axes: false
+        Show Trail: false
+        Value: true
+      shoulder_link:
+        Alpha: 1
+        Show Axes: false
+        Show Trail: false
+        Value: true
+      upperarm_link:
+        Alpha: 1
+        Show Axes: false
+        Show Trail: false
+        Value: true
+      wrist1_link:
+        Alpha: 1
+        Show Axes: false
+        Show Trail: false
+        Value: true
+      wrist2_link:
+        Alpha: 1
+        Show Axes: false
+        Show Trail: false
+        Value: true
+      wrist3_link:
+        Alpha: 1
+        Show Axes: false
+        Show Trail: false
+        Value: true
+    Mass Properties:
+      Inertia: false
+      Mass: false
+    Name: arm_2
+    TF Prefix: arm_2
+    Update Interval: 0
+    Value: true
+    Visual Enabled: true
+  - Alpha: 1
+    Class: rviz_default_plugins/RobotModel
+    Collision Enabled: false
+    Description File: ''
+    Description Source: Topic
+    Description Topic:
+      Depth: 5
+      Durability Policy: Volatile
+      History Policy: Keep Last
+      Reliability Policy: Reliable
+      Value: /arm_3_description
+    Enabled: true
+    Links:
+      All Links Enabled: true
+      Expand Joint Details: false
+      Expand Link Details: false
+      Expand Tree: false
+      Link Tree Style: Links in Alphabetic Order
+      base_link:
+        Alpha: 1
+        Show Axes: false
+        Show Trail: false
+        Value: true
+      forearm_link:
+        Alpha: 1
+        Show Axes: false
+        Show Trail: false
+        Value: true
+      shoulder_link:
+        Alpha: 1
+        Show Axes: false
+        Show Trail: false
+        Value: true
+      upperarm_link:
+        Alpha: 1
+        Show Axes: false
+        Show Trail: false
+        Value: true
+      wrist1_link:
+        Alpha: 1
+        Show Axes: false
+        Show Trail: false
+        Value: true
+      wrist2_link:
+        Alpha: 1
+        Show Axes: false
+        Show Trail: false
+        Value: true
+      wrist3_link:
+        Alpha: 1
+        Show Axes: false
+        Show Trail: false
+        Value: true
+    Mass Properties:
+      Inertia: false
+      Mass: false
+    Name: arm_3
+    TF Prefix: arm_3
+    Update Interval: 0
+    Value: true
+    Visual Enabled: true
+  Enabled: true
+  Global Options:
+    Background Color: 40; 42; 46
+    Fixed Frame: map
+    Frame Rate: 30
+  Name: root
+  Tools:
+  - Class: rviz_default_plugins/Interact
+    Hide Inactive Objects: true
+  - Class: rviz_default_plugins/MoveCamera
+  - Class: rviz_default_plugins/Select
+  - Class: rviz_default_plugins/FocusCamera
+  - Class: rviz_default_plugins/Measure
+    Line color: 128; 128; 0
+  Transformation:
+    Current:
+      Class: rviz_default_plugins/TF
+  Value: true
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 18.371219635009766
+      Enable Stereo Rendering:
+        Stereo Eye Separation: 0.05999999865889549
+        Stereo Focal Distance: 1
+        Swap Stereo Eyes: false
+        Value: false
+      Focal Point:
+        X: 0
+        Y: 10
+        Z: 0
+      Focal Shape Fixed Size: true
+      Focal Shape Size: 0.05000000074505806
+      Invert Z Axis: false
+      Name: Current View
+      Near Clip Distance: 0.009999999776482582
+      Pitch: 0.27499982714653015
+      Target Frame: <Fixed Frame>
+      Value: Orbit (rviz)
+      Yaw: 2.2915995121002197
+    Saved: null
+Window Geometry:
+  Displays:
+    collapsed: false
+  Height: 1219
+  Hide Left Dock: false
+  Hide Right Dock: false
+  QMainWindow State: 000000ff00000000fd0000000100000000000001cb00000469fc0200000002fb000000100044006900730070006c006100790073010000003d000002a9000000c900fffffffb0000000a0056006900650077007301000002ec000001ba000000a400ffffff000002900000046900000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  Views:
+    collapsed: false
+  Width: 1121
+  X: 70
+  Y: 27

@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 41068bf6d97929d46a655432712593bd
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 354922
+  packageName: Modular Conveyor Belt System
+  packageVersion: 1.1.0
+  assetPath: Assets/Conveyor System/Prefab/SplitterConveyor.prefab
+  uploadId: 1010908

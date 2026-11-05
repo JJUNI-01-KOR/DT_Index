@@ -1,0 +1,167 @@
+<?xml version="1.0"?>
+<!--
+  agv_1.urdf : AGV1 (Warehouse Robot Controller의 robot_boxy) 모양을 상자·원기둥으로 단순화한 URDF. 담당 D
+  원본 모델은 구매 에셋이라 메시를 쓰지 않는다. 치수는 robot_boxy.fbx의 뼈대 위치에서 잼 (11/03).
+    전체 약 0.46 × 0.50 × 0.50 m, 좌우 바퀴 간격 0.368 m, 앞뒤 바퀴 간격 0.274 m, 무한궤도 높이 0.20 m
+
+  좌표 (ROS REP-103): x 앞, y 왼쪽, z 위. 원점 agv_1_link = 바닥 가운데
+    Unity AgvWaypointDriver가 /tf (map → agv_1_link)를 보낸다. 이 파일은 그 아래 몸통·바퀴만 정의한다.
+  바퀴 관절 이름은 Unity /agv_1_joint_states의 이름과 같아야 한다 (bone_wheel_l_back 등).
+-->
+<robot name="agv_1">
+
+  <material name="body">  <color rgba="0.93 0.62 0.18 1.0"/></material>
+  <material name="track"> <color rgba="0.20 0.20 0.22 1.0"/></material>
+  <material name="wheel"> <color rgba="0.08 0.08 0.08 1.0"/></material>
+  <material name="hub">   <color rgba="0.75 0.75 0.78 1.0"/></material>
+  <material name="eye">   <color rgba="0.10 0.90 0.95 1.0"/></material>
+  <material name="tail">  <color rgba="0.90 0.10 0.10 1.0"/></material>
+
+  <!-- 바닥 가운데. Unity가 map에서 이 프레임까지의 TF를 보낸다 -->
+  <link name="agv_1_link"/>
+
+  <!-- 몸통 -->
+  <link name="agv_1_body">
+    <visual>
+      <geometry><box size="0.46 0.30 0.32"/></geometry>
+      <material name="body"/>
+    </visual>
+    <collision>
+      <geometry><box size="0.46 0.30 0.32"/></geometry>
+    </collision>
+  </link>
+  <joint name="agv_1_body_joint" type="fixed">
+    <parent link="agv_1_link"/>
+    <child link="agv_1_body"/>
+    <origin xyz="0 0 0.33" rpy="0 0 0"/>
+  </joint>
+
+  <!-- 앞 표시 (눈): RViz에서 앞뒤 구분용 -->
+  <link name="agv_1_eye">
+    <visual>
+      <geometry><box size="0.01 0.20 0.08"/></geometry>
+      <material name="eye"/>
+    </visual>
+  </link>
+  <joint name="agv_1_eye_joint" type="fixed">
+    <parent link="agv_1_body"/>
+    <child link="agv_1_eye"/>
+    <origin xyz="0.235 0 0.03" rpy="0 0 0"/>
+  </joint>
+
+  <!-- 뒤 표시 (후미등) -->
+  <link name="agv_1_tail">
+    <visual>
+      <geometry><box size="0.01 0.12 0.06"/></geometry>
+      <material name="tail"/>
+    </visual>
+  </link>
+  <joint name="agv_1_tail_joint" type="fixed">
+    <parent link="agv_1_body"/>
+    <child link="agv_1_tail"/>
+    <origin xyz="-0.235 0 -0.08" rpy="0 0 0"/>
+  </joint>
+
+  <!-- 무한궤도 (왼쪽·오른쪽) -->
+  <link name="agv_1_track_l">
+    <visual>
+      <geometry><box size="0.46 0.05 0.20"/></geometry>
+      <material name="track"/>
+    </visual>
+  </link>
+  <joint name="agv_1_track_l_joint" type="fixed">
+    <parent link="agv_1_link"/>
+    <child link="agv_1_track_l"/>
+    <origin xyz="0 0.184 0.109" rpy="0 0 0"/>
+  </joint>
+
+  <link name="agv_1_track_r">
+    <visual>
+      <geometry><box size="0.46 0.05 0.20"/></geometry>
+      <material name="track"/>
+    </visual>
+  </link>
+  <joint name="agv_1_track_r_joint" type="fixed">
+    <parent link="agv_1_link"/>
+    <child link="agv_1_track_r"/>
+    <origin xyz="0 -0.184 0.109" rpy="0 0 0"/>
+  </joint>
+
+  <!-- 바퀴 4개 (continuous, y축 회전). 무한궤도 바깥으로 조금 나와 보이고, 허브 막대로 도는 것이 보인다 -->
+  <link name="agv_1_wheel_l_front">
+    <visual>
+      <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+      <geometry><cylinder radius="0.095" length="0.07"/></geometry>
+      <material name="wheel"/>
+    </visual>
+    <visual>
+      <origin xyz="0 0.036 0" rpy="0 0 0"/>
+      <geometry><box size="0.16 0.004 0.03"/></geometry>
+      <material name="hub"/>
+    </visual>
+  </link>
+  <joint name="bone_wheel_l_front" type="continuous">
+    <parent link="agv_1_link"/>
+    <child link="agv_1_wheel_l_front"/>
+    <origin xyz="0.137 0.184 0.109" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+
+  <link name="agv_1_wheel_l_back">
+    <visual>
+      <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+      <geometry><cylinder radius="0.095" length="0.07"/></geometry>
+      <material name="wheel"/>
+    </visual>
+    <visual>
+      <origin xyz="0 0.036 0" rpy="0 0 0"/>
+      <geometry><box size="0.16 0.004 0.03"/></geometry>
+      <material name="hub"/>
+    </visual>
+  </link>
+  <joint name="bone_wheel_l_back" type="continuous">
+    <parent link="agv_1_link"/>
+    <child link="agv_1_wheel_l_back"/>
+    <origin xyz="-0.137 0.184 0.109" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+
+  <link name="agv_1_wheel_r_front">
+    <visual>
+      <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+      <geometry><cylinder radius="0.095" length="0.07"/></geometry>
+      <material name="wheel"/>
+    </visual>
+    <visual>
+      <origin xyz="0 -0.036 0" rpy="0 0 0"/>
+      <geometry><box size="0.16 0.004 0.03"/></geometry>
+      <material name="hub"/>
+    </visual>
+  </link>
+  <joint name="bone_wheel_r_front" type="continuous">
+    <parent link="agv_1_link"/>
+    <child link="agv_1_wheel_r_front"/>
+    <origin xyz="0.137 -0.184 0.109" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+
+  <link name="agv_1_wheel_r_back">
+    <visual>
+      <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+      <geometry><cylinder radius="0.095" length="0.07"/></geometry>
+      <material name="wheel"/>
+    </visual>
+    <visual>
+      <origin xyz="0 -0.036 0" rpy="0 0 0"/>
+      <geometry><box size="0.16 0.004 0.03"/></geometry>
+      <material name="hub"/>
+    </visual>
+  </link>
+  <joint name="bone_wheel_r_back" type="continuous">
+    <parent link="agv_1_link"/>
+    <child link="agv_1_wheel_r_back"/>
+    <origin xyz="-0.137 -0.184 0.109" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+
+</robot>

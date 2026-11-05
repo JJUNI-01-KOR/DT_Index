@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 1be3c735adea00543afa037f249bfc1a
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 354922
+  packageName: Modular Conveyor Belt System
+  packageVersion: 1.1.0
+  assetPath: Assets/Conveyor System/Demo/Materials/Accent_Step_FF8026.mat
+  uploadId: 1010908

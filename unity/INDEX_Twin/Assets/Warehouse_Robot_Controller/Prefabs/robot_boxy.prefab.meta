@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: d7697a359f59af045a365c1e2b7d09cd
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 389700
+  packageName: Warehouse Robot Controller
+  packageVersion: 1.0
+  assetPath: Assets/Warehouse_Robot_Controller/Prefabs/robot_boxy.prefab
+  uploadId: 943844

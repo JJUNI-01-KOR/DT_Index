@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: eaa4cf5a5840c1d40b318e63f67b71c5
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 354922
+  packageName: Modular Conveyor Belt System
+  packageVersion: 1.1.0
+  assetPath: Assets/Conveyor System/Prefab/SmartSplitterConveyor.prefab
+  uploadId: 1010908

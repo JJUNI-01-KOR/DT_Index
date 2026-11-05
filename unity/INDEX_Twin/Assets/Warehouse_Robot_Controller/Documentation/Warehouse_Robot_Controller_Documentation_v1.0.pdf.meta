@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 24e71e7a1691f1648a3e12fe0bc3a8bc
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 389700
+  packageName: Warehouse Robot Controller
+  packageVersion: 1.0
+  assetPath: Assets/Warehouse_Robot_Controller/Documentation/Warehouse_Robot_Controller_Documentation_v1.0.pdf
+  uploadId: 943844

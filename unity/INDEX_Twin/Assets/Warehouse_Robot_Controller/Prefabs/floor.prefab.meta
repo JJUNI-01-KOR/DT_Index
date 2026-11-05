@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 00c20580d47b38a49b8b2a872fa0f07c
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 389700
+  packageName: Warehouse Robot Controller
+  packageVersion: 1.0
+  assetPath: Assets/Warehouse_Robot_Controller/Prefabs/floor.prefab
+  uploadId: 943844

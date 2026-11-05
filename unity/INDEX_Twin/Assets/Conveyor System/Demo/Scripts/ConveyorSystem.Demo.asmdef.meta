@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 981203d88047ff04aa86730f729aa112
+AssemblyDefinitionImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 354922
+  packageName: Modular Conveyor Belt System
+  packageVersion: 1.1.0
+  assetPath: Assets/Conveyor System/Demo/Scripts/ConveyorSystem.Demo.asmdef
+  uploadId: 1010908

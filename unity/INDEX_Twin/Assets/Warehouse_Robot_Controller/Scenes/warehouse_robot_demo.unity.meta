@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 0d5bfcb9fa9818f48b19cab6ea9e9dac
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 389700
+  packageName: Warehouse Robot Controller
+  packageVersion: 1.0
+  assetPath: Assets/Warehouse_Robot_Controller/Scenes/warehouse_robot_demo.unity
+  uploadId: 943844

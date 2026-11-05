@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 5ecc57cc4cc76a04b92be3d1de008fdc
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 354922
+  packageName: Modular Conveyor Belt System
+  packageVersion: 1.1.0
+  assetPath: Assets/Conveyor System/Demo/Materials/Accent_Green.mat
+  uploadId: 1010908

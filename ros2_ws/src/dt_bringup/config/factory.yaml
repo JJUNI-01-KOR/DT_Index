@@ -1,22 +1,43 @@
 # 공정 설정값 — 코드 수정 없이 바꾸는 값 (NFR-09). 단위는 이름에 포함.
 # 노드 이름 아래 ros__parameters 형식. launch에서 각 노드에 이 파일을 넘긴다.
+# 기준: SRS v3.1 부록 A.5. factory_manager와 palletizer가 같이 쓰는 값은 두 곳에 같은 값을 적는다.
+#
+# 사용법
+# - 실수 값은 1.0처럼 소수점을 붙인다 (정수로 쓰면 파라미터 형식 오류로 노드가 안 뜬다).
+# - 노드가 declare_parameter로 선언하지 않은 키는 무시된다. 키를 추가하면 노드에서도 선언한다.
+# - 0.0은 "아직 안 채움"이다 (팀 결정 후 채운다).
 
 factory_manager:
   ros__parameters:
-    feed_stop_count: 4          # 라인 위 박스가 이 수 이상이면 투입 중지 (FR-04)
-    feed_resume_count: 3        # 이 수 이하가 되면 투입 재개 (FR-04)
-    heartbeat_period_sec: 1.0   # Heartbeat 발행 주기 (FR-17)
-    heartbeat_timeout_sec: 3.0  # 이 시간 동안 수신이 없으면 E_STOP (FR-17)
-    state_publish_period_sec: 1.0
-    stats_publish_period_sec: 1.0
+    state_publish_period_sec: 1.0     # /factory/state·stats 발행과 조건 재검사 주기 (FR-20)
+    heartbeat_period_sec: 1.0         # /factory/heartbeat_ros 발행 주기 (FR-17)
+    heartbeat_timeout_sec: 3.0        # Unity Heartbeat가 이 시간 끊기면 E_STOP(heartbeat) (FR-17)
+    normal_weight_min_kg: 0.80       # 정상 판정 하한, 포함 (FR-07, 제안값)
+    normal_weight_max_kg: 1.20       # 정상 판정 상한, 포함 (FR-07, 제안값)
+    lane_capacity_count: 15           # main+ok 또는 main+ng가 이 수 이상이면 투입 중지 (FR-04)
+    lane_end_slots: 2               # 레인 끝 칸(집는 자리+대기)이 이 수만큼 찬 레인이 있으면 컨베이어 정지 + 팔1 투입 중지, 칸이 비면 재개 (11/02 A). 0 = 안 씀
+    load_timeout_sec: 3.0             # /conveyor_1_load를 이 시간 못 받으면 투입 요청 안 함 (FR-04)
+    pallet_capacity: 5                # 적재 기준 1×5. palletizer와 같은 값 (FR-12)
+    pick_timeout_sec: 20.0            # 팔1 집기 응답 제한. 응답이 아예 안 오면 실패 (FR-18)
+    weight_report_timeout_sec: 15.0   # 팔1 투입 성공 뒤 이 시간 안에 무게 보고가 없으면 E_STOP(timeout_weight) (FR-02, 제안값)
+    agv_timeout_sec: 30.0             # PN_DOCK·FINAL 뒤 이 시간 안에 /agv_1_loaded가 안 바뀌면 E_STOP(timeout_agv) (FR-13, 제안값)
 
-palletizer_node:
+# palletizer_1(정상 레인)·palletizer_2(불량 레인)는 같은 코드를 lane만 바꿔 띄운다 (launch/_common.py, 11/03 D).
+# 섹션 이름 = 노드 이름. 다르면 설정을 못 읽고 기본값으로 돈다. 두 섹션의 나머지 값은 같게 둔다.
+# 집는 자리(pick_ok·pick_ng)와 파레트 자리(pallet_1·pallet_2)는 line_coords.yaml에서 읽는다.
+palletizer_1:
   ros__parameters:
-    pallet_capacity: 12         # 출고 팔레트 적재 수 (2x2, 3단) (FR-14)
-    pallet_cols: 2
-    pallet_rows: 2
-    pallet_layers: 3
+    lane: ok                    # ok → /conveyor_1_end_ok, 팔2, 파레트1
+    pallet_capacity: 5          # 적재 기준. factory_manager와 같은 값 (FR-10, 11)
+    cushion_height_m: 0.1       # 방석 높이. k단 놓기 = 파레트 상면 + (k-1) × 이 값 (Cushion 프리팹 0.4×0.4×0.1 m, 11/01 확정)
+    pick_timeout_sec: 20.0      # 팔2·3 집기 응답 제한. Unity 팔 서버의 동작 제한 15초(Inspector)보다 길게 (FR-18)
 
-agv_1_controller:
+palletizer_2:
   ros__parameters:
-    waypoints_file: agv_waypoints.yaml
+    lane: ng                    # ng → /conveyor_1_end_ng, 팔3, 파레트2
+    pallet_capacity: 5
+    cushion_height_m: 0.1
+    pick_timeout_sec: 20.0
+
+# agv_1_controller는 waypoints_file을 여기서 주지 않는다. 비워 두면 노드가 dt_bringup에 설치된
+# config/agv_waypoints.yaml 전체 경로를 스스로 찾는다. 파일 이름만 적으면(상대 경로) 실행 위치 기준이라 못 찾고 죽는다 (11/03 D).

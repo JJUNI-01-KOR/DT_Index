@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 828ce10599908224887f5717c6990729
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 389700
+  packageName: Warehouse Robot Controller
+  packageVersion: 1.0
+  assetPath: Assets/Warehouse_Robot_Controller/Prefabs/pallet.prefab
+  uploadId: 943844

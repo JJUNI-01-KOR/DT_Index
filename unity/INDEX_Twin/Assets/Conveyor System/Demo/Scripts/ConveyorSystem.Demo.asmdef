@@ -1,0 +1,25 @@
+{
+    "name": "ConveyorSystem.Demo",
+    "rootNamespace": "ConveyorSystem.Demo",
+    "references": [
+        "ConveyorSystem",
+        "Unity.TextMeshPro",
+        "UnityEngine.UI",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.inputsystem",
+            "expression": "1.0.0",
+            "define": "CONVEYOR_INPUT_SYSTEM"
+        }
+    ],
+    "noEngineReferences": false
+}
